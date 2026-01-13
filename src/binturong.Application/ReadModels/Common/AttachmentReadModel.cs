@@ -1,0 +1,10 @@
+namespace Application.ReadModels.Common;
+
+public sealed class AttachmentReadModel
+{
+    public int AttachmentId { get; init; }
+    public string FileName { get; init; } = default!;
+    public string FileS3Key { get; init; } = default!;
+    public string? DocumentType { get; init; }
+    public DateTime UploadedAt { get; init; }
+}
