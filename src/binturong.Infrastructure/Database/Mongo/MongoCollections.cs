@@ -1,4 +1,4 @@
-namespace Infrastructure.Persistence.Mongo;
+namespace Infrastructure.Database.Mongo;
 
 internal static class MongoCollections
 {

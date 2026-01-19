@@ -2,11 +2,11 @@ using Domain.Payrolls;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Infrastructure.Configurations.Payroll;
+namespace Infrastructure.Configurations.Payrolls;
 
-internal sealed class PayrollConfiguration : IEntityTypeConfiguration<Payroll>
+internal sealed class PayrollConfiguration : IEntityTypeConfiguration<Domain.Payrolls.Payroll>
 {
-    public void Configure(EntityTypeBuilder<Payroll> builder)
+    public void Configure(EntityTypeBuilder<Domain.Payrolls.Payroll> builder)
     {
         builder.ToTable("Payrolls");
 

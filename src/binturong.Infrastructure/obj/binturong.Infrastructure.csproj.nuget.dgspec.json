@@ -4,6 +4,161 @@
     "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {}
   },
   "projects": {
+    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj",
+        "projectName": "binturong.Application",
+        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj",
+        "packagesPath": "/home/maurice/.nuget/packages/",
+        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/maurice/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj"
+              },
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "FluentValidation.DependencyInjectionExtensions": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[10.0.1, )"
+            },
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[3.6.0, )"
+            },
+            "Scrutor": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "Serilog": {
+              "target": "Package",
+              "version": "[4.3.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj",
+        "projectName": "binturong.Domain",
+        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj",
+        "packagesPath": "/home/maurice/.nuget/packages/",
+        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/maurice/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
     "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
@@ -12,6 +167,113 @@
         "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj",
         "packagesPath": "/home/maurice/.nuget/packages/",
         "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/obj/",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "/home/maurice/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net9.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj"
+              },
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj"
+              },
+              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "dependencies": {
+            "AspNetCore.HealthChecks.MongoDb": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "AspNetCore.HealthChecks.NpgSql": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "EFCore.NamingConventions": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[8.15.0, )"
+            },
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[3.6.0, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.4, )"
+            },
+            "Npgsql.EntityFrameworkCore.PostgreSQL": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.15.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
+        "projectName": "binturong.SharedKernel",
+        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
+        "packagesPath": "/home/maurice/.nuget/packages/",
+        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/maurice/.nuget/NuGet/NuGet.Config"
@@ -43,32 +305,6 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
-          "dependencies": {
-            "AspNetCore.HealthChecks.MongoDb": {
-              "target": "Package",
-              "version": "[9.0.0, )"
-            },
-            "AspNetCore.HealthChecks.NpgSql": {
-              "target": "Package",
-              "version": "[9.0.0, )"
-            },
-            "EFCore.NamingConventions": {
-              "target": "Package",
-              "version": "[9.0.0, )"
-            },
-            "Microsoft.Extensions.Diagnostics.HealthChecks": {
-              "target": "Package",
-              "version": "[10.0.1, )"
-            },
-            "MongoDB.Driver": {
-              "target": "Package",
-              "version": "[3.5.2, )"
-            },
-            "Newtonsoft.Json": {
-              "target": "Package",
-              "version": "[13.0.4, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",

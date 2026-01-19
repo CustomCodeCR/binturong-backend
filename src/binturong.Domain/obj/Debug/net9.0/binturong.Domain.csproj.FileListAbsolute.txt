@@ -1,0 +1,16 @@
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/bin/Debug/net9.0/binturong.Domain.deps.json
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/bin/Debug/net9.0/binturong.Domain.dll
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/bin/Debug/net9.0/binturong.Domain.pdb
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/bin/Debug/net9.0/binturong.SharedKernel.dll
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/bin/Debug/net9.0/binturong.SharedKernel.pdb
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.csproj.AssemblyReference.cache
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.AssemblyInfoInputs.cache
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.AssemblyInfo.cs
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.csproj.CoreCompileInputs.cache
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.sourcelink.json
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturon.7CF1A219.Up2Date
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.dll
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/refint/binturong.Domain.dll
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/binturong.Domain.pdb
+/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/Debug/net9.0/ref/binturong.Domain.dll

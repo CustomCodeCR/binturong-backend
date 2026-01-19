@@ -12,10 +12,9 @@ using Application.ReadModels.Purchases;
 using Application.ReadModels.Sales;
 using Application.ReadModels.Security;
 using Application.ReadModels.Services;
-using Infrastructure.Persistence.Mongo;
 using MongoDB.Driver;
 
-namespace Infrastructure.Persistence.Mongo;
+namespace Infrastructure.Database.Mongo;
 
 internal sealed class MongoIndexSeeder
 {

@@ -81,7 +81,7 @@ internal sealed class OutboxProcessor : BackgroundService
                 msg.LastError = ex.ToString();
                 msg.NextAttemptAt = DateTime.UtcNow.AddMinutes(5);
 
-                _logger.LogError(ex, "Failed processing outbox message {OutboxId}", msg.OutboxId);
+                _logger.LogError(ex, "Failed processing outbox message {OutboxId}", msg.Id);
             }
         }
 
