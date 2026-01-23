@@ -6,6 +6,7 @@ using Application.Abstractions.Projections;
 using Infrastructure.Authentication;
 using Infrastructure.Authorization;
 using Infrastructure.Database.Mongo;
+using Infrastructure.Database.Mongo.Migrations;
 using Infrastructure.Database.Outbox;
 using Infrastructure.Database.Postgres;
 using Infrastructure.DomainEvents;
@@ -53,7 +54,11 @@ public static class DependencyInjection
     )
     {
         // Postgres (WriteModel)
-        string? connectionString = configuration.GetConnectionString("Database");
+        var connectionString =
+            configuration.GetConnectionString("Database")
+            ?? throw new InvalidOperationException(
+                "Missing ConnectionStrings:Database in binturong.Api appsettings."
+            );
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options
@@ -108,8 +113,13 @@ public static class DependencyInjection
             return new MongoReadDb(client, mongoDbName);
         });
 
-        // Index seeder (you can run it from Program.cs on startup)
+        // Index seeder (run from Program.cs on startup)
         services.AddSingleton<MongoIndexSeeder>();
+
+        // Mongo migrations (versioned data migrations)
+        // Register each migration here (or swap to assembly scanning later)
+        // services.AddSingleton<IMongoMigration, V1_NoOp>();
+        services.AddSingleton<MongoMigrationRunner>();
 
         return services;
     }
