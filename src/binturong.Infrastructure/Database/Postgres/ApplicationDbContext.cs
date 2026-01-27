@@ -1,24 +1,42 @@
 using Application.Abstractions.Data;
+using Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Database.Postgres;
 
 public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 {
+    private readonly IDomainEventsDispatcher? _domainEventsDispatcher;
+
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options) { }
 
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        IDomainEventsDispatcher domainEventsDispatcher
+    )
+        : base(options)
+    {
+        _domainEventsDispatcher = domainEventsDispatcher;
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Applies ALL IEntityTypeConfiguration<> found in binturong.Infrastructure assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-
         base.OnModelCreating(modelBuilder);
     }
 
-    // You can omit explicit DbSet properties and use Set<TEntity>(),
-    // but because your interface requires them, declare them.
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        if (_domainEventsDispatcher is not null)
+        {
+            await _domainEventsDispatcher.DispatchAsync(this, cancellationToken);
+        }
 
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    // DbSets
     public DbSet<Domain.Users.User> Users => Set<Domain.Users.User>();
     public DbSet<Domain.Roles.Role> Roles => Set<Domain.Roles.Role>();
     public DbSet<Domain.Scopes.Scope> Scopes => Set<Domain.Scopes.Scope>();

@@ -3,7 +3,7 @@ namespace Application.ReadModels.Security;
 public sealed class UserReadModel
 {
     public string Id { get; init; } = default!; // "user:{UserId}"
-    public int UserId { get; init; }
+    public Guid UserId { get; init; }
 
     public string Username { get; init; } = default!;
     public string Email { get; init; } = default!;

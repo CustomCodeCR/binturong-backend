@@ -28,15 +28,18 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration
-    ) =>
-        services
-            .AddServices()
-            .AddDatabase(configuration)
-            .AddMongo(configuration)
-            .AddOutboxAndProjections(configuration)
-            .AddHealthChecks(configuration)
-            .AddAuthenticationInternal(configuration)
-            .AddAuthorizationInternal();
+    )
+    {
+        services.AddServices();
+        services.AddDatabase(configuration);
+        services.AddMongo(configuration);
+        services.AddOutboxAndProjections(configuration);
+        services.AddHealthChecks(configuration);
+        services.AddAuthenticationInternal(configuration);
+        services.AddAuthorizationInternal();
+
+        return services;
+    }
 
     // =========================
     // Services
@@ -78,15 +81,12 @@ public static class DependencyInjection
                 .UseSnakeCaseNamingConvention()
         );
 
-        // Write abstraction
+        // Abstraction used by Application
         services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>()
         );
 
-        // NOTE:
-        // Do NOT register DbContext as Scoped for HostedService consumption directly.
-        // If OutboxProcessor needs DbContext, it MUST create scopes internally.
-        // Still, keeping this mapping is okay for scoped consumers.
+        // OutboxProcessor asks DbContext (scoped) inside a scope
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
         return services;
@@ -100,11 +100,13 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
+        // Prefer ConnectionStrings:Mongo; fallback to Mongo:ConnectionString
         var mongoConn =
             configuration.GetConnectionString("Mongo")
             ?? configuration["Mongo:ConnectionString"]
             ?? "mongodb://localhost:27017";
 
+        // Database name for read models
         var mongoDbName = configuration["Mongo:Database"] ?? "binturong_read";
 
         services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConn));
@@ -113,20 +115,18 @@ public static class DependencyInjection
             sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName)
         );
 
-        // Read abstraction
+        // IReadDb abstraction (if your app uses it)
         services.AddSingleton<IReadDb>(sp =>
         {
             var client = sp.GetRequiredService<IMongoClient>();
             return new MongoReadDb(client, mongoDbName);
         });
 
-        // Mongo bootstrap components
+        // Indexes + migrations
         services.AddSingleton<MongoIndexSeeder>();
-
-        // Versioned migrations runner
         services.AddSingleton<MongoMigrationRunner>();
 
-        // One public entrypoint to apply Mongo indexes + migrations
+        // Single entrypoint used by Program.cs
         services.AddSingleton<IMongoBootstrapper, MongoBootstrapper>();
 
         return services;
@@ -140,16 +140,29 @@ public static class DependencyInjection
         IConfiguration configuration
     )
     {
+        // Bind Outbox options from config ("Outbox": { ... })
+        services.Configure<OutboxOptions>(configuration.GetSection("Outbox"));
+
         services.AddSingleton<IOutboxSerializer, OutboxSerializer>();
         services.AddSingleton<IOutboxMessageFactory, OutboxMessageFactory>();
 
-        // IMPORTANT:
-        // ProjectionDispatcher typically resolves IProjector<T> which you registered as Scoped in Application.
-        // So Dispatcher should be Scoped too (or it must create scopes).
+        // Register all IProjector<> from Infrastructure assembly (includes UserProjection, etc.)
+        services.Scan(scan =>
+            scan.FromAssembliesOf(typeof(DependencyInjection))
+                .AddClasses(c => c.AssignableTo(typeof(IProjector<>)), publicOnly: false)
+                .AsImplementedInterfaces()
+                .WithScopedLifetime()
+        );
+
+        // Dispatcher must be scoped because it resolves scoped projectors
         services.AddScoped<IProjectionDispatcher, ProjectionDispatcher>();
 
-        // Background worker: must use IServiceScopeFactory internally
-        services.AddHostedService<OutboxProcessor>();
+        // HostedService should only run if enabled
+        var enabled = configuration.GetValue("Outbox:Enabled", true);
+        if (enabled)
+        {
+            services.AddHostedService<OutboxProcessor>();
+        }
 
         return services;
     }
@@ -172,7 +185,7 @@ public static class DependencyInjection
             services.AddHealthChecks();
         }
 
-        // Mongo health check optional (only if you added the package)
+        // Optional: Mongo health checks if you add the package
         // var mongoConn = configuration.GetConnectionString("Mongo");
         // if (!string.IsNullOrWhiteSpace(mongoConn))
         //     services.AddHealthChecks().AddMongoDb(mongoConn);
@@ -197,6 +210,7 @@ public static class DependencyInjection
             .AddJwtBearer(o =>
             {
                 o.RequireHttpsMetadata = false;
+
                 o.TokenValidationParameters = new TokenValidationParameters
                 {
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
@@ -212,6 +226,7 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
         services.AddScoped<IUserContext, UserContext>();
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenProvider, TokenProvider>();
 

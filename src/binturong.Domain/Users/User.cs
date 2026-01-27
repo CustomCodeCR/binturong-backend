@@ -16,6 +16,26 @@ public sealed class User : Entity
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    public void RaiseRegistered() =>
+        Raise(new UserRegisteredDomainEvent(Id, Username, Email, IsActive, CreatedAt, UpdatedAt));
+
+    public void RaiseUpdated() =>
+        Raise(
+            new UserUpdatedDomainEvent(
+                Id,
+                Username,
+                Email,
+                IsActive,
+                LastLogin,
+                MustChangePassword,
+                FailedAttempts,
+                LockedUntil,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseDeleted() => Raise(new UserDeletedDomainEvent(Id));
+
     // Navigation
     public ICollection<Domain.UserRoles.UserRole> UserRoles { get; set; } =
         new List<Domain.UserRoles.UserRole>();
