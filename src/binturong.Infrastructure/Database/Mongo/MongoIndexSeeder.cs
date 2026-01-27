@@ -16,7 +16,7 @@ using MongoDB.Driver;
 
 namespace Infrastructure.Database.Mongo;
 
-internal sealed class MongoIndexSeeder
+public sealed class MongoIndexSeeder
 {
     private readonly IMongoDatabase _database;
 

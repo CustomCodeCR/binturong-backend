@@ -33,27 +33,32 @@ public static class DependencyInjection
             .AddServices()
             .AddDatabase(configuration)
             .AddMongo(configuration)
-            .AddOutboxAndProjections()
+            .AddOutboxAndProjections(configuration)
             .AddHealthChecks(configuration)
             .AddAuthenticationInternal(configuration)
             .AddAuthorizationInternal();
 
+    // =========================
+    // Services
+    // =========================
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-        // This dispatcher should collect domain events and write them into OutboxMessages.
+        // Collect domain events and write them into OutboxMessages
         services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
 
         return services;
     }
 
+    // =========================
+    // Postgres (Write Model)
+    // =========================
     private static IServiceCollection AddDatabase(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
-        // Postgres (WriteModel)
         var connectionString =
             configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException(
@@ -73,24 +78,28 @@ public static class DependencyInjection
                 .UseSnakeCaseNamingConvention()
         );
 
-        // Your Write DbContext
+        // Write abstraction
         services.AddScoped<IApplicationDbContext>(sp =>
             sp.GetRequiredService<ApplicationDbContext>()
         );
 
-        // Needed because OutboxProcessor asks for DbContext
+        // NOTE:
+        // Do NOT register DbContext as Scoped for HostedService consumption directly.
+        // If OutboxProcessor needs DbContext, it MUST create scopes internally.
+        // Still, keeping this mapping is okay for scoped consumers.
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
         return services;
     }
 
+    // =========================
+    // Mongo (Read Model)
+    // =========================
     private static IServiceCollection AddMongo(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
-        // Mongo (ReadModel)
-        // Prefer ConnectionStrings:Mongo; fallback to "Mongo:ConnectionString"
         var mongoConn =
             configuration.GetConnectionString("Mongo")
             ?? configuration["Mongo:ConnectionString"]
@@ -101,62 +110,88 @@ public static class DependencyInjection
         services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConn));
 
         services.AddSingleton<IMongoDatabase>(sp =>
-        {
-            var client = sp.GetRequiredService<IMongoClient>();
-            return client.GetDatabase(mongoDbName);
-        });
+            sp.GetRequiredService<IMongoClient>().GetDatabase(mongoDbName)
+        );
 
-        // IReadDb abstraction
+        // Read abstraction
         services.AddSingleton<IReadDb>(sp =>
         {
             var client = sp.GetRequiredService<IMongoClient>();
             return new MongoReadDb(client, mongoDbName);
         });
 
-        // Index seeder (run from Program.cs on startup)
+        // Mongo bootstrap components
         services.AddSingleton<MongoIndexSeeder>();
 
-        // Mongo migrations (versioned data migrations)
-        // Register each migration here (or swap to assembly scanning later)
-        // services.AddSingleton<IMongoMigration, V1_NoOp>();
+        // Versioned migrations runner
         services.AddSingleton<MongoMigrationRunner>();
+
+        // One public entrypoint to apply Mongo indexes + migrations
+        services.AddSingleton<IMongoBootstrapper, MongoBootstrapper>();
 
         return services;
     }
 
-    private static IServiceCollection AddOutboxAndProjections(this IServiceCollection services)
+    // =========================
+    // Outbox + Projections
+    // =========================
+    private static IServiceCollection AddOutboxAndProjections(
+        this IServiceCollection services,
+        IConfiguration configuration
+    )
     {
-        // Outbox serialization + outbox message creation
         services.AddSingleton<IOutboxSerializer, OutboxSerializer>();
         services.AddSingleton<IOutboxMessageFactory, OutboxMessageFactory>();
 
-        // Projection dispatcher (resolves IProjector<TEvent> via DI)
-        services.AddSingleton<IProjectionDispatcher, ProjectionDispatcher>();
+        // IMPORTANT:
+        // ProjectionDispatcher typically resolves IProjector<T> which you registered as Scoped in Application.
+        // So Dispatcher should be Scoped too (or it must create scopes).
+        services.AddScoped<IProjectionDispatcher, ProjectionDispatcher>();
 
-        // Background worker that reads OutboxMessages and projects to Mongo
+        // Background worker: must use IServiceScopeFactory internally
         services.AddHostedService<OutboxProcessor>();
 
         return services;
     }
 
+    // =========================
+    // Health Checks
+    // =========================
     private static IServiceCollection AddHealthChecks(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
-        services.AddHealthChecks().AddNpgSql(configuration.GetConnectionString("Database")!);
+        var postgresConn = configuration.GetConnectionString("Database");
+        if (!string.IsNullOrWhiteSpace(postgresConn))
+        {
+            services.AddHealthChecks().AddNpgSql(postgresConn);
+        }
+        else
+        {
+            services.AddHealthChecks();
+        }
 
-        // If you have the package for Mongo health checks, you can add it here.
-        // services.AddHealthChecks().AddMongoDb(configuration.GetConnectionString("Mongo")!);
+        // Mongo health check optional (only if you added the package)
+        // var mongoConn = configuration.GetConnectionString("Mongo");
+        // if (!string.IsNullOrWhiteSpace(mongoConn))
+        //     services.AddHealthChecks().AddMongoDb(mongoConn);
 
         return services;
     }
 
+    // =========================
+    // AuthN
+    // =========================
     private static IServiceCollection AddAuthenticationInternal(
         this IServiceCollection services,
         IConfiguration configuration
     )
     {
+        var jwtSecret =
+            configuration["Jwt:Secret"]
+            ?? throw new InvalidOperationException("Missing Jwt:Secret in configuration.");
+
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(o =>
@@ -164,11 +199,13 @@ public static class DependencyInjection
                 o.RequireHttpsMetadata = false;
                 o.TokenValidationParameters = new TokenValidationParameters
                 {
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(configuration["Jwt:Secret"]!)
-                    ),
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
                     ValidIssuer = configuration["Jwt:Issuer"],
                     ValidAudience = configuration["Jwt:Audience"],
+                    ValidateIssuerSigningKey = true,
+                    ValidateIssuer = !string.IsNullOrWhiteSpace(configuration["Jwt:Issuer"]),
+                    ValidateAudience = !string.IsNullOrWhiteSpace(configuration["Jwt:Audience"]),
+                    ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
                 };
             });
@@ -181,6 +218,9 @@ public static class DependencyInjection
         return services;
     }
 
+    // =========================
+    // AuthZ
+    // =========================
     private static IServiceCollection AddAuthorizationInternal(this IServiceCollection services)
     {
         services.AddAuthorization();

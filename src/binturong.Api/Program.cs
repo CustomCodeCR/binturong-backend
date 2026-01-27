@@ -7,7 +7,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 builder.Services.AddControllers();
 
 builder.Services.AddApplication();
@@ -27,7 +26,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapControllers();
-app.MapGet("/weatherforecast", () => "OK");
+app.MapGet("/health", () => Results.Ok("OK"));
 
 app.Run();
 
@@ -40,6 +39,7 @@ static class MigrationExtensions
 
         var db =
             scope.ServiceProvider.GetRequiredService<Infrastructure.Database.Postgres.ApplicationDbContext>();
+
         await db.Database.MigrateAsync();
     }
 
@@ -47,12 +47,8 @@ static class MigrationExtensions
     {
         using var scope = app.Services.CreateScope();
 
-        // 1) Ensure indexes
-        var indexSeeder = scope.ServiceProvider.GetRequiredService<MongoIndexSeeder>();
-        await indexSeeder.SeedAsync();
-
-        // 2) Run versioned migrations (data backfills / renames)
-        var runner = scope.ServiceProvider.GetRequiredService<MongoMigrationRunner>();
-        await runner.RunAsync();
+        // Single entrypoint (indexes + mongo migrations)
+        var mongo = scope.ServiceProvider.GetRequiredService<IMongoBootstrapper>();
+        await mongo.ApplyAsync();
     }
 }
