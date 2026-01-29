@@ -340,6 +340,10 @@
               "target": "Package",
               "version": "[3.6.0, )"
             },
+            "MongoDB.Driver.Core": {
+              "target": "Package",
+              "version": "[2.30.0, )"
+            },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.4, )"

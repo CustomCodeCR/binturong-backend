@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "RR3DIJXsMm0=",
+  "dgSpecHash": "Eluml1kvcho=",
   "success": true,
   "projectFilePath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Api/binturong.Api.csproj",
   "expectedPackageFiles": [
@@ -8,6 +8,8 @@
     "/home/maurice/.nuget/packages/aspnetcore.healthchecks.npgsql/9.0.0/aspnetcore.healthchecks.npgsql.9.0.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/aspnetcore.healthchecks.ui.client/9.0.0/aspnetcore.healthchecks.ui.client.9.0.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/aspnetcore.healthchecks.ui.core/9.0.0/aspnetcore.healthchecks.ui.core.9.0.0.nupkg.sha512",
+    "/home/maurice/.nuget/packages/awssdk.core/3.7.100.14/awssdk.core.3.7.100.14.nupkg.sha512",
+    "/home/maurice/.nuget/packages/awssdk.securitytoken/3.7.100.14/awssdk.securitytoken.3.7.100.14.nupkg.sha512",
     "/home/maurice/.nuget/packages/dnsclient/1.6.1/dnsclient.1.6.1.nupkg.sha512",
     "/home/maurice/.nuget/packages/efcore.namingconventions/9.0.0/efcore.namingconventions.9.0.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/fluentvalidation/12.1.1/fluentvalidation.12.1.1.nupkg.sha512",
@@ -59,6 +61,8 @@
     "/home/maurice/.nuget/packages/microsoft.win32.registry/5.0.0/microsoft.win32.registry.5.0.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/mongodb.bson/3.6.0/mongodb.bson.3.6.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/mongodb.driver/3.6.0/mongodb.driver.3.6.0.nupkg.sha512",
+    "/home/maurice/.nuget/packages/mongodb.driver.core/2.30.0/mongodb.driver.core.2.30.0.nupkg.sha512",
+    "/home/maurice/.nuget/packages/mongodb.libmongocrypt/1.12.0/mongodb.libmongocrypt.1.12.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
     "/home/maurice/.nuget/packages/newtonsoft.json/13.0.4/newtonsoft.json.13.0.4.nupkg.sha512",
     "/home/maurice/.nuget/packages/npgsql/9.0.0/npgsql.9.0.0.nupkg.sha512",

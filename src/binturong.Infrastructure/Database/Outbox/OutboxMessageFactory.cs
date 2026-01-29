@@ -31,7 +31,7 @@ internal sealed class OutboxMessageFactory : IOutboxMessageFactory
             PayloadJson = payload,
             Status = "PENDING",
             Attempts = 0,
-            LastError = null,
+            LastError = "",
             NextAttemptAt = null,
         };
     }

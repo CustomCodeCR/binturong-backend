@@ -94,7 +94,7 @@ internal sealed class OutboxProcessor : BackgroundService
 
                 msg.Status = OutboxStatus.Published;
                 msg.Attempts++;
-                msg.LastError = null;
+                msg.LastError = "";
                 msg.NextAttemptAt = null;
             }
             catch (Exception ex)

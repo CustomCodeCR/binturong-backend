@@ -12,4 +12,5 @@ public sealed class OutboxMessage : Entity
     public int Attempts { get; set; }
     public string LastError { get; set; } = string.Empty;
     public DateTime? NextAttemptAt { get; set; }
+    public DateTime? LockedUntil { get; set; }
 }

@@ -1670,9 +1670,12 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("attempts");
 
                     b.Property<string>("LastError")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("LockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("locked_until");
 
                     b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone")
@@ -1701,6 +1704,9 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_outbox_messages");
+
+                    b.HasIndex("LockedUntil")
+                        .HasDatabaseName("ix_outbox_messages_locked_until");
 
                     b.HasIndex("NextAttemptAt")
                         .HasDatabaseName("ix_outbox_messages_next_attempt_at");

@@ -9,7 +9,6 @@ using Infrastructure.Database.Mongo;
 using Infrastructure.Database.Mongo.Migrations;
 using Infrastructure.Database.Outbox;
 using Infrastructure.Database.Postgres;
-using Infrastructure.DomainEvents;
 using Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +17,9 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using SharedKernel;
 
@@ -47,10 +49,6 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
-
-        // Collect domain events and write them into OutboxMessages
-        services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
-
         return services;
     }
 
@@ -109,6 +107,24 @@ public static class DependencyInjection
         // Database name for read models
         var mongoDbName = configuration["Mongo:Database"] ?? "binturong_read";
 
+        // ===== Mongo GUID configuration (MongoDB.Driver 3.x) =====
+        // GuidRepresentationConvention no longer exists in 3.x.
+        // Configure GUID storage via serializers (UUID Standard / subtype 4).
+        try
+        {
+            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+
+            // Optional: helps when Guids are stored inside "object" fields
+            var disc = BsonSerializer.LookupDiscriminatorConvention(typeof(object));
+            BsonSerializer.RegisterSerializer(
+                new ObjectSerializer(disc, GuidRepresentation.Standard)
+            );
+        }
+        catch
+        {
+            // ignore if already registered (tests / multiple startup runs)
+        }
+
         services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConn));
 
         services.AddSingleton<IMongoDatabase>(sp =>
@@ -158,8 +174,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectionDispatcher, ProjectionDispatcher>();
 
         // HostedService should only run if enabled
-        var enabled = configuration.GetValue("Outbox:Enabled", true);
-        if (enabled)
+        if (configuration.GetValue("Outbox:Enabled", true))
         {
             services.AddHostedService<OutboxProcessor>();
         }
@@ -203,7 +218,7 @@ public static class DependencyInjection
     {
         var jwtSecret =
             configuration["Jwt:Secret"]
-            ?? throw new InvalidOperationException("Missing Jwt:Secret in configuration.");
+            ?? throw new InvalidOperationException("Missing Jwt:Secret");
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

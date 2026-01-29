@@ -1,6 +1,6 @@
 using System.Reflection;
 using Application.Abstractions.Data;
-using Infrastructure.DomainEvents;
+using Application.Abstractions.Outbox;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
 
@@ -8,18 +8,18 @@ namespace Infrastructure.Database.Postgres;
 
 public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 {
-    private readonly IDomainEventsDispatcher? _domainEventsDispatcher;
+    private readonly IOutboxMessageFactory? _outboxMessageFactory;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options) { }
 
     public ApplicationDbContext(
         DbContextOptions<ApplicationDbContext> options,
-        IDomainEventsDispatcher domainEventsDispatcher
+        IOutboxMessageFactory outboxMessageFactory
     )
         : base(options)
     {
-        _domainEventsDispatcher = domainEventsDispatcher;
+        _outboxMessageFactory = outboxMessageFactory;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -33,19 +33,21 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         // 1) Collect domain events from tracked entities (before saving)
         List<IDomainEvent> domainEvents = CollectDomainEvents();
 
-        // 2) Persist changes first
-        int result = await base.SaveChangesAsync(cancellationToken);
-
-        // 3) Dispatch domain events (after commit)
-        if (_domainEventsDispatcher is not null && domainEvents.Count > 0)
+        // 2) Convert domain events -> OutboxMessages (same transaction)
+        if (_outboxMessageFactory is not null && domainEvents.Count > 0)
         {
-            await _domainEventsDispatcher.DispatchAsync(domainEvents, cancellationToken);
+            foreach (var domainEvent in domainEvents)
+            {
+                var msg = _outboxMessageFactory.Create(domainEvent);
+                OutboxMessages.Add(msg);
+            }
 
-            // 4) Clear events to avoid re-dispatching
+            // Important: clear after capturing, to avoid duplicates on next SaveChanges
             ClearDomainEvents();
         }
 
-        return result;
+        // 3) Persist changes + outbox messages together
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
     private List<IDomainEvent> CollectDomainEvents()
@@ -58,7 +60,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (entity is null)
                 continue;
 
-            // Look for: IReadOnlyCollection<IDomainEvent> DomainEvents { get; }
             var prop = entity
                 .GetType()
                 .GetProperty(
@@ -72,8 +73,7 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (!typeof(IEnumerable<IDomainEvent>).IsAssignableFrom(prop.PropertyType))
                 continue;
 
-            var value = prop.GetValue(entity) as IEnumerable<IDomainEvent>;
-            if (value is null)
+            if (prop.GetValue(entity) is not IEnumerable<IDomainEvent> value)
                 continue;
 
             events.AddRange(value);
@@ -90,7 +90,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (entity is null)
                 continue;
 
-            // Preferred: void ClearDomainEvents()
             var clearMethod = entity
                 .GetType()
                 .GetMethod(
@@ -107,7 +106,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
                 continue;
             }
 
-            // Fallback: set DomainEvents to empty list if it has a setter
             var prop = entity
                 .GetType()
                 .GetProperty(
@@ -121,7 +119,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             if (!typeof(IEnumerable<IDomainEvent>).IsAssignableFrom(prop.PropertyType))
                 continue;
 
-            // set to an empty list to clear
             prop.SetValue(entity, Array.Empty<IDomainEvent>());
         }
     }
