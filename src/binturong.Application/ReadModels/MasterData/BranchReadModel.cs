@@ -3,7 +3,7 @@ namespace Application.ReadModels.MasterData;
 public sealed class BranchReadModel
 {
     public string Id { get; init; } = default!; // "branch:{BranchId}"
-    public int BranchId { get; init; }
+    public Guid BranchId { get; init; }
 
     public string Code { get; init; } = default!;
     public string Name { get; init; } = default!;
