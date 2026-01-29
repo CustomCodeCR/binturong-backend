@@ -79,7 +79,6 @@ internal sealed class OutboxProcessor : BackgroundService
         foreach (var msg in candidates)
         {
             msg.Status = OutboxStatus.Processing;
-            msg.LockedUntil = now.Add(LockDuration);
         }
 
         await db.SaveChangesAsync(ct);

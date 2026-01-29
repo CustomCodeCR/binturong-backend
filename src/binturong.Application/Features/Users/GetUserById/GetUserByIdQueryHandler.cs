@@ -1,9 +1,10 @@
 using Application.Abstractions.Messaging;
+using Application.ReadModels.Common;
 using Application.ReadModels.Security;
 using MongoDB.Driver;
 using SharedKernel;
 
-namespace Application.Features.Users.Queries;
+namespace Application.Features.Users.GetUserById;
 
 internal sealed class GetUserByIdQueryHandler : IQueryHandler<GetUserByIdQuery, UserReadModel>
 {

@@ -1,6 +1,6 @@
-namespace Infrastructure.Database.Mongo;
+namespace Application.ReadModels.Common;
 
-internal static class MongoCollections
+public static class MongoCollections
 {
     // ===== MASTER DATA =====
     public const string Branches = "branches";

@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Application;
 using Infrastructure;
 using Infrastructure.Database.Mongo.Migrations;
@@ -7,7 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
+
+builder.Services.AddEndpoints(typeof(Program).Assembly);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -25,12 +27,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapControllers();
-app.MapGet("/health", () => Results.Ok("OK"));
+app.MapEndpoints();
+
+app.MapGet("/health", () => Results.Ok("OK")).WithTags("Health");
 
 app.Run();
 
-// ===== Helpers =====
 static class MigrationExtensions
 {
     public static async Task ApplyMigrationsAsync(this WebApplication app)
@@ -47,7 +49,6 @@ static class MigrationExtensions
     {
         using var scope = app.Services.CreateScope();
 
-        // Single entrypoint (indexes + mongo migrations)
         var mongo = scope.ServiceProvider.GetRequiredService<IMongoBootstrapper>();
         await mongo.ApplyAsync();
     }

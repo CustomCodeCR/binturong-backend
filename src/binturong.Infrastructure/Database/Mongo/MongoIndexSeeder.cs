@@ -1,5 +1,6 @@
 using Application.ReadModels.Accounting;
 using Application.ReadModels.Audit;
+using Application.ReadModels.Common;
 using Application.ReadModels.CRM;
 using Application.ReadModels.Ecommerce;
 using Application.ReadModels.Inventory;

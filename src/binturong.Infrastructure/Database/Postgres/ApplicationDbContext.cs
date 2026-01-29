@@ -1,6 +1,8 @@
+using System.Reflection;
 using Application.Abstractions.Data;
 using Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel;
 
 namespace Infrastructure.Database.Postgres;
 
@@ -28,12 +30,100 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        if (_domainEventsDispatcher is not null)
+        // 1) Collect domain events from tracked entities (before saving)
+        List<IDomainEvent> domainEvents = CollectDomainEvents();
+
+        // 2) Persist changes first
+        int result = await base.SaveChangesAsync(cancellationToken);
+
+        // 3) Dispatch domain events (after commit)
+        if (_domainEventsDispatcher is not null && domainEvents.Count > 0)
         {
-            await _domainEventsDispatcher.DispatchAsync(this, cancellationToken);
+            await _domainEventsDispatcher.DispatchAsync(domainEvents, cancellationToken);
+
+            // 4) Clear events to avoid re-dispatching
+            ClearDomainEvents();
         }
 
-        return await base.SaveChangesAsync(cancellationToken);
+        return result;
+    }
+
+    private List<IDomainEvent> CollectDomainEvents()
+    {
+        var events = new List<IDomainEvent>();
+
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            object entity = entry.Entity;
+            if (entity is null)
+                continue;
+
+            // Look for: IReadOnlyCollection<IDomainEvent> DomainEvents { get; }
+            var prop = entity
+                .GetType()
+                .GetProperty(
+                    "DomainEvents",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+                );
+
+            if (prop is null)
+                continue;
+
+            if (!typeof(IEnumerable<IDomainEvent>).IsAssignableFrom(prop.PropertyType))
+                continue;
+
+            var value = prop.GetValue(entity) as IEnumerable<IDomainEvent>;
+            if (value is null)
+                continue;
+
+            events.AddRange(value);
+        }
+
+        return events;
+    }
+
+    private void ClearDomainEvents()
+    {
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            object entity = entry.Entity;
+            if (entity is null)
+                continue;
+
+            // Preferred: void ClearDomainEvents()
+            var clearMethod = entity
+                .GetType()
+                .GetMethod(
+                    "ClearDomainEvents",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    types: Type.EmptyTypes,
+                    modifiers: null
+                );
+
+            if (clearMethod is not null)
+            {
+                clearMethod.Invoke(entity, null);
+                continue;
+            }
+
+            // Fallback: set DomainEvents to empty list if it has a setter
+            var prop = entity
+                .GetType()
+                .GetProperty(
+                    "DomainEvents",
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
+                );
+
+            if (prop is null || !prop.CanWrite)
+                continue;
+
+            if (!typeof(IEnumerable<IDomainEvent>).IsAssignableFrom(prop.PropertyType))
+                continue;
+
+            // set to an empty list to clear
+            prop.SetValue(entity, Array.Empty<IDomainEvent>());
+        }
     }
 
     // DbSets

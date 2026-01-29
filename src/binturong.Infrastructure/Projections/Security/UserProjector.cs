@@ -1,7 +1,7 @@
 using Application.Abstractions.Projections;
+using Application.ReadModels.Common;
 using Application.ReadModels.Security;
 using Domain.Users;
-using Infrastructure.Database.Mongo;
 using MongoDB.Driver;
 
 namespace Infrastructure.Projections.Security;
