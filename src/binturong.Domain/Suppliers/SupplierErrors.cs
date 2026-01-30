@@ -22,4 +22,29 @@ public static class SupplierErrors
         "Suppliers.IdentificationNotUnique",
         "The provided identification is not unique"
     );
+
+    public static readonly Error EmailIsRequired = Error.Validation(
+        "Suppliers.EmailIsRequired",
+        "Email is required"
+    );
+
+    public static readonly Error IdentificationIsRequired = Error.Validation(
+        "Suppliers.IdentificationIsRequired",
+        "Identification is required"
+    );
+
+    public static readonly Error TradeNameIsRequired = Error.Validation(
+        "Suppliers.TradeNameIsRequired",
+        "Trade Name is required"
+    );
+
+    public static readonly Error PhoneIsRequired = Error.Validation(
+        "Suppliers.PhoneIsRequired",
+        "Phone is required"
+    );
+
+    public static readonly Error LegalNameIsRequired = Error.Validation(
+        "Suppliers.LegalNameIsRequired",
+        "Legal Name is required"
+    );
 }

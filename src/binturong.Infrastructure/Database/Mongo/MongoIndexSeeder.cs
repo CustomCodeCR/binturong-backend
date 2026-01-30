@@ -84,7 +84,7 @@ public sealed class MongoIndexSeeder
 
         await CreateIndexAsync<GatewayTransactionReadModel>(
             MongoCollections.GatewayTransactions,
-            x => x.InvoiceId
+            x => x.InvoiceId!
         );
 
         await CreateIndexAsync<GatewayTransactionReadModel>(

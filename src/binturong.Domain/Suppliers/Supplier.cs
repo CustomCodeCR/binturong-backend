@@ -27,4 +27,70 @@ public sealed class Supplier : Entity
         new List<Domain.PurchaseOrders.PurchaseOrder>();
     public ICollection<Domain.AccountsPayable.AccountPayable> AccountsPayables { get; set; } =
         new List<Domain.AccountsPayable.AccountPayable>();
+
+    // =========================
+    // Domain events
+    // =========================
+
+    public void RaiseCreated() =>
+        Raise(
+            new SupplierCreatedDomainEvent(
+                Id,
+                IdentificationType,
+                Identification,
+                LegalName,
+                TradeName,
+                Email,
+                Phone,
+                PaymentTerms,
+                MainCurrency,
+                IsActive,
+                CreatedAt,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseUpdated() =>
+        Raise(
+            new SupplierUpdatedDomainEvent(
+                Id,
+                LegalName,
+                TradeName,
+                Email,
+                Phone,
+                PaymentTerms,
+                MainCurrency,
+                IsActive,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseDeleted() => Raise(new SupplierDeletedDomainEvent(Id));
+
+    // =========================
+    // Domain behavior (root)
+    // =========================
+
+    public void UpdateBasicInfo(
+        string legalName,
+        string tradeName,
+        string email,
+        string phone,
+        string? paymentTerms,
+        string? mainCurrency,
+        bool isActive
+    )
+    {
+        TradeName = tradeName;
+        LegalName = legalName;
+        Email = email;
+        Phone = phone;
+        PaymentTerms = paymentTerms!;
+        MainCurrency = mainCurrency!;
+        IsActive = isActive;
+
+        UpdatedAt = DateTime.UtcNow;
+
+        RaiseUpdated();
+    }
 }

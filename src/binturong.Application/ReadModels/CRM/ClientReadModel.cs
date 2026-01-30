@@ -5,7 +5,7 @@ namespace Application.ReadModels.CRM;
 public sealed class ClientReadModel
 {
     public string Id { get; init; } = default!; // "client:{ClientId}"
-    public int ClientId { get; init; }
+    public Guid ClientId { get; init; }
 
     public string PersonType { get; init; } = default!;
     public string IdentificationType { get; init; } = default!;

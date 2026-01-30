@@ -5,7 +5,7 @@ namespace Application.ReadModels.CRM;
 public sealed class SupplierReadModel
 {
     public string Id { get; init; } = default!; // "supplier:{SupplierId}"
-    public int SupplierId { get; init; }
+    public Guid SupplierId { get; init; }
 
     public string IdentificationType { get; init; } = default!;
     public string Identification { get; init; } = default!;

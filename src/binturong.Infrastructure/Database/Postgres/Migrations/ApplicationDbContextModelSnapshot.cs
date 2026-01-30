@@ -366,6 +366,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("ClientId");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("District")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -377,7 +381,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("is_primary");
 
                     b.Property<string>("Notes")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("notes");
@@ -387,6 +390,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("province");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_client_addresses");
@@ -426,6 +433,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("file_s3key");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("uploaded_at");
@@ -450,6 +461,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("ClientId");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -461,7 +476,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("is_primary");
 
                     b.Property<string>("JobTitle")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("job_title");
@@ -473,10 +487,13 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("name");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("phone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_client_contacts");
@@ -495,7 +512,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("ClientId");
 
                     b.Property<string>("ClientType")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("client_type");
@@ -529,7 +545,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("identification_type");
 
                     b.Property<string>("Industry")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("industry");
@@ -555,7 +570,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("score");
 
                     b.Property<string>("SecondaryPhone")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("secondary_phone");
@@ -3105,6 +3119,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("SupplierId");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("uploaded_at");
@@ -3124,6 +3142,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("ContactId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -3156,6 +3178,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Property<Guid>("SupplierId")
                         .HasColumnType("uuid")
                         .HasColumnName("SupplierId");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.HasKey("Id")
                         .HasName("pk_supplier_contacts");

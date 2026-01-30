@@ -19,4 +19,24 @@ public static class ClientErrors
         "Clients.IdentificationNotUnique",
         "The provided identification is not unique"
     );
+
+    public static readonly Error EmailIsRequired = Error.Validation(
+        "Clients.EmailIsRequired",
+        "Email is required"
+    );
+
+    public static readonly Error IdentificationIsRequired = Error.Validation(
+        "Clients.IdentificationIsRequired",
+        "Identification is required"
+    );
+
+    public static readonly Error TradeNameIsRequired = Error.Validation(
+        "Clients.TradeNameIsRequired",
+        "Trade Name is required"
+    );
+
+    public static readonly Error PrimaryPhoneIsRequired = Error.Validation(
+        "Clients.PrimaryPhoneIsRequired",
+        "Primary Phone is required"
+    );
 }
