@@ -129,6 +129,7 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.Scopes.Scope> Scopes => Set<Domain.Scopes.Scope>();
     public DbSet<Domain.UserRoles.UserRole> UserRoles => Set<Domain.UserRoles.UserRole>();
     public DbSet<Domain.RoleScopes.RoleScope> RoleScopes => Set<Domain.RoleScopes.RoleScope>();
+    public DbSet<Domain.UserScopes.UserScope> UserScopes => Set<Domain.UserScopes.UserScope>();
 
     public DbSet<Domain.Branches.Branch> Branches => Set<Domain.Branches.Branch>();
     public DbSet<Domain.Warehouses.Warehouse> Warehouses => Set<Domain.Warehouses.Warehouse>();

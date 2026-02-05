@@ -17,7 +17,6 @@ using Domain.EmployeeHistory;
 using Domain.Employees;
 using Domain.GatewayTransactions;
 using Domain.InventoryMovements;
-using Domain.InventoryMovementTypes;
 using Domain.InventoryTransfers;
 using Domain.InvoiceDetails;
 using Domain.Invoices;
@@ -59,6 +58,7 @@ using Domain.Taxes;
 using Domain.UnitsOfMeasure;
 using Domain.UserRoles;
 using Domain.Users;
+using Domain.UserScopes;
 using Domain.Warehouses;
 using Domain.WarehouseStocks;
 using Domain.WebClients;
@@ -74,6 +74,7 @@ public interface IApplicationDbContext
     DbSet<Scope> Scopes { get; }
     DbSet<UserRole> UserRoles { get; }
     DbSet<RoleScope> RoleScopes { get; }
+    DbSet<UserScope> UserScopes { get; }
 
     // Master data
     DbSet<Branch> Branches { get; }

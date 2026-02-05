@@ -12,6 +12,7 @@ public static class MongoCollections
     // ===== SECURITY =====
     public const string Users = "users";
     public const string Roles = "roles";
+    public const string Scopes = "scopes";
 
     // ===== CRM =====
     public const string Clients = "clients";

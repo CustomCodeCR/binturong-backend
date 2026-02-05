@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("binturong.SharedKernel")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bd6f86f1d4ad2ed3655d22213b6db36ef7542aac")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2c7a81e784c31ebdc9520504aef7402e69e803c0")]
 [assembly: System.Reflection.AssemblyProductAttribute("binturong.SharedKernel")]
 [assembly: System.Reflection.AssemblyTitleAttribute("binturong.SharedKernel")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

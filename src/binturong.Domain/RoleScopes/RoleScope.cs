@@ -10,4 +10,9 @@ public sealed class RoleScope : Entity
 
     public Domain.Roles.Role? Role { get; set; }
     public Domain.Scopes.Scope? Scope { get; set; }
+
+    public void RaiseAssigned(string scopeCode)
+    {
+        Raise(new RoleScopeAssignedDomainEvent(RoleId, ScopeId, scopeCode));
+    }
 }

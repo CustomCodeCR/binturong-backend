@@ -2635,7 +2635,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("RoleId");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("description");
@@ -2816,7 +2815,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnName("code");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("description");
@@ -3455,6 +3453,33 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasDatabaseName("ix_user_roles_user_id_role_id");
 
                     b.ToTable("UserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.UserScopes.UserScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scope_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_scopes");
+
+                    b.HasIndex("ScopeId")
+                        .HasDatabaseName("ix_user_scopes_scope_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_scopes_user_id");
+
+                    b.ToTable("user_scopes", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Users.User", b =>
@@ -4624,6 +4649,27 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.UserScopes.UserScope", b =>
+                {
+                    b.HasOne("Domain.Scopes.Scope", "Scope")
+                        .WithMany("UserScopes")
+                        .HasForeignKey("ScopeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_scopes_scopes_scope_id");
+
+                    b.HasOne("Domain.Users.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_scopes_users_user_id");
+
+                    b.Navigation("Scope");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.WarehouseStocks.WarehouseStock", b =>
                 {
                     b.HasOne("Domain.Products.Product", "Product")
@@ -4883,6 +4929,8 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
             modelBuilder.Entity("Domain.Scopes.Scope", b =>
                 {
                     b.Navigation("RoleScopes");
+
+                    b.Navigation("UserScopes");
                 });
 
             modelBuilder.Entity("Domain.ServiceOrders.ServiceOrder", b =>

@@ -10,4 +10,8 @@ public sealed class UserRole : Entity
 
     public Domain.Users.User? User { get; set; }
     public Domain.Roles.Role? Role { get; set; }
+
+    public void RaiseAssigned() => Raise(new UserRoleAssignedDomainEvent(UserId, RoleId));
+
+    public void RaiseRemoved() => Raise(new UserRoleRemovedDomainEvent(UserId, RoleId));
 }

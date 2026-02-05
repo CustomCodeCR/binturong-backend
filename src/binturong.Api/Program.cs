@@ -1,14 +1,13 @@
 using Api.Extensions;
 using Application;
 using Infrastructure;
-using Infrastructure.Database.Mongo.Migrations;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
+// =========================
+// Services
+// =========================
+builder.Services.AddSwaggerWithJwt();
 builder.Services.AddEndpoints(typeof(Program).Assembly);
 
 builder.Services.AddApplication();
@@ -16,40 +15,46 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// =========================
+// Dev / Infra bootstrap
+// =========================
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-
-    await app.ApplyMigrationsAsync();
-    await app.ApplyMongoAsync();
+    app.UseSwaggerWithJwt();
+    await app.ApplyDevMigrationsAndMongoAsync();
 }
 
+// =========================
+// Scope seeding (ALL envs)
+// =========================
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    await services
+        .GetRequiredService<Infrastructure.Database.Postgres.Seed.ScopeSeeder>()
+        .SeedAsync();
+    await services
+        .GetRequiredService<Infrastructure.Database.Postgres.Seed.RoleSeeder>()
+        .SeedAsync();
+    await services
+        .GetRequiredService<Infrastructure.Database.Postgres.Seed.AdminUserSeeder>()
+        .SeedAsync();
+}
+
+// =========================
+// Middleware
+// =========================
 app.UseHttpsRedirection();
 
-app.MapEndpoints();
+// Auth MUST be before endpoints
+app.UseAuthentication();
+app.UseAuthorization();
 
+// =========================
+// Endpoints
+// =========================
+app.MapEndpoints();
 app.MapGet("/health", () => Results.Ok("OK")).WithTags("Health");
 
 app.Run();
-
-static class MigrationExtensions
-{
-    public static async Task ApplyMigrationsAsync(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-
-        var db =
-            scope.ServiceProvider.GetRequiredService<Infrastructure.Database.Postgres.ApplicationDbContext>();
-
-        await db.Database.MigrateAsync();
-    }
-
-    public static async Task ApplyMongoAsync(this WebApplication app)
-    {
-        using var scope = app.Services.CreateScope();
-
-        var mongo = scope.ServiceProvider.GetRequiredService<IMongoBootstrapper>();
-        await mongo.ApplyAsync();
-    }
-}
