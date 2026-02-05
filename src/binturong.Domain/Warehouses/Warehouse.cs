@@ -25,4 +25,37 @@ public sealed class Warehouse : Entity
 
     public ICollection<Domain.PurchaseReceipts.PurchaseReceipt> PurchaseReceipts { get; set; } =
         new List<Domain.PurchaseReceipts.PurchaseReceipt>();
+
+    public void RaiseCreated(string branchCode, string branchName) =>
+        Raise(
+            new WarehouseCreatedDomainEvent(
+                Id,
+                BranchId,
+                branchCode,
+                branchName,
+                Code,
+                Name,
+                Description,
+                IsActive,
+                CreatedAt,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseUpdated(string branchCode, string branchName) =>
+        Raise(
+            new WarehouseUpdatedDomainEvent(
+                Id,
+                BranchId,
+                branchCode,
+                branchName,
+                Code,
+                Name,
+                Description,
+                IsActive,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseDeleted() => Raise(new WarehouseDeletedDomainEvent(Id, BranchId));
 }

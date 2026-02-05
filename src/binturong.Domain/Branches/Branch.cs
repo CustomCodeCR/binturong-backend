@@ -32,4 +32,37 @@ public sealed class Branch : Entity
 
     public ICollection<Domain.ServiceOrders.ServiceOrder> ServiceOrders { get; set; } =
         new List<Domain.ServiceOrders.ServiceOrder>();
+
+    public void RaiseCreated() =>
+        Raise(
+            new BranchCreatedDomainEvent(
+                Id,
+                Code,
+                Name,
+                Address,
+                Phone,
+                IsActive,
+                CreatedAt,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseUpdated() =>
+        Raise(new BranchUpdatedDomainEvent(Id, Code, Name, Address, Phone, IsActive, UpdatedAt));
+
+    public void RaiseDeleted() => Raise(new BranchDeletedDomainEvent(Id));
+
+    public void Activate()
+    {
+        IsActive = true;
+        UpdatedAt = DateTime.UtcNow;
+        Raise(new BranchActivatedDomainEvent(Id, UpdatedAt));
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+        UpdatedAt = DateTime.UtcNow;
+        Raise(new BranchDeactivatedDomainEvent(Id, UpdatedAt));
+    }
 }

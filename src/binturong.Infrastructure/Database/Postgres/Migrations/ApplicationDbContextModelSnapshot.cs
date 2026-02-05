@@ -1023,39 +1023,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.ToTable("GatewayTransactions", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.InventoryMovementTypes.InventoryMovementType", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("MovementTypeId");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("code");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("description");
-
-                    b.Property<int>("Sign")
-                        .HasColumnType("integer")
-                        .HasColumnName("sign");
-
-                    b.HasKey("Id")
-                        .HasName("pk_inventory_movement_types");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("ix_inventory_movement_types_code");
-
-                    b.ToTable("InventoryMovementTypes", (string)null);
-                });
-
             modelBuilder.Entity("Domain.InventoryMovements.InventoryMovement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1067,9 +1034,9 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("movement_date");
 
-                    b.Property<Guid>("MovementTypeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("MovementTypeId");
+                    b.Property<int>("MovementType")
+                        .HasColumnType("integer")
+                        .HasColumnName("movement_type");
 
                     b.Property<string>("Notes")
                         .IsRequired()
@@ -1115,9 +1082,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.HasIndex("MovementDate")
                         .HasDatabaseName("ix_inventory_movements_movement_date");
 
-                    b.HasIndex("MovementTypeId")
-                        .HasDatabaseName("ix_inventory_movements_movement_type_id");
-
                     b.HasIndex("ProductId")
                         .HasDatabaseName("ix_inventory_movements_product_id");
 
@@ -1128,6 +1092,108 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasDatabaseName("ix_inventory_movements_warehouse_to");
 
                     b.ToTable("InventoryMovements", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.InventoryTransfers.InventoryTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid>("FromBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_branch_id");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("ToBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_branch_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inventory_transfers");
+
+                    b.HasIndex("FromBranchId")
+                        .HasDatabaseName("ix_inventory_transfers_from_branch_id");
+
+                    b.HasIndex("ToBranchId")
+                        .HasDatabaseName("ix_inventory_transfers_to_branch_id");
+
+                    b.ToTable("inventory_transfers", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.InventoryTransfers.InventoryTransferLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("FromWarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_warehouse_id");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("ToWarehouseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_warehouse_id");
+
+                    b.Property<Guid>("TransferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transfer_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inventory_transfer_lines");
+
+                    b.HasIndex("FromWarehouseId")
+                        .HasDatabaseName("ix_inventory_transfer_lines_from_warehouse_id");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_inventory_transfer_lines_product_id");
+
+                    b.HasIndex("ToWarehouseId")
+                        .HasDatabaseName("ix_inventory_transfer_lines_to_warehouse_id");
+
+                    b.HasIndex("TransferId")
+                        .HasDatabaseName("ix_inventory_transfer_lines_transfer_id");
+
+                    b.ToTable("inventory_transfer_lines", (string)null);
                 });
 
             modelBuilder.Entity("Domain.InvoiceDetails.InvoiceDetail", b =>
@@ -3819,13 +3885,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
             modelBuilder.Entity("Domain.InventoryMovements.InventoryMovement", b =>
                 {
-                    b.HasOne("Domain.InventoryMovementTypes.InventoryMovementType", "MovementType")
-                        .WithMany("Movements")
-                        .HasForeignKey("MovementTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_inventory_movements_inventory_movement_types_movement_type_id");
-
                     b.HasOne("Domain.Products.Product", "Product")
                         .WithMany("InventoryMovements")
                         .HasForeignKey("ProductId")
@@ -3847,11 +3906,69 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
                     b.Navigation("FromWarehouse");
 
-                    b.Navigation("MovementType");
+                    b.Navigation("Product");
+
+                    b.Navigation("ToWarehouse");
+                });
+
+            modelBuilder.Entity("Domain.InventoryTransfers.InventoryTransfer", b =>
+                {
+                    b.HasOne("Domain.Branches.Branch", "FromBranch")
+                        .WithMany()
+                        .HasForeignKey("FromBranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfers_branches_from_branch_id");
+
+                    b.HasOne("Domain.Branches.Branch", "ToBranch")
+                        .WithMany()
+                        .HasForeignKey("ToBranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfers_branches_to_branch_id");
+
+                    b.Navigation("FromBranch");
+
+                    b.Navigation("ToBranch");
+                });
+
+            modelBuilder.Entity("Domain.InventoryTransfers.InventoryTransferLine", b =>
+                {
+                    b.HasOne("Domain.Warehouses.Warehouse", "FromWarehouse")
+                        .WithMany()
+                        .HasForeignKey("FromWarehouseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfer_lines_warehouses_from_warehouse_id");
+
+                    b.HasOne("Domain.Products.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfer_lines_products_product_id");
+
+                    b.HasOne("Domain.Warehouses.Warehouse", "ToWarehouse")
+                        .WithMany()
+                        .HasForeignKey("ToWarehouseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfer_lines_warehouses_to_warehouse_id");
+
+                    b.HasOne("Domain.InventoryTransfers.InventoryTransfer", "Transfer")
+                        .WithMany("Lines")
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_inventory_transfer_lines_inventory_transfers_transfer_id");
+
+                    b.Navigation("FromWarehouse");
 
                     b.Navigation("Product");
 
                     b.Navigation("ToWarehouse");
+
+                    b.Navigation("Transfer");
                 });
 
             modelBuilder.Entity("Domain.InvoiceDetails.InvoiceDetail", b =>
@@ -4626,9 +4743,9 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Navigation("ServiceOrderTechnicians");
                 });
 
-            modelBuilder.Entity("Domain.InventoryMovementTypes.InventoryMovementType", b =>
+            modelBuilder.Entity("Domain.InventoryTransfers.InventoryTransfer", b =>
                 {
-                    b.Navigation("Movements");
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Domain.Invoices.Invoice", b =>

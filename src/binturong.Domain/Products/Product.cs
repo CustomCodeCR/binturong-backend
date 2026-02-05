@@ -47,4 +47,45 @@ public sealed class Product : Entity
         new List<Domain.ServiceOrderMaterials.ServiceOrderMaterial>();
     public ICollection<Domain.CartItems.CartItem> CartItems { get; set; } =
         new List<Domain.CartItems.CartItem>();
+
+    public void RaiseCreated() =>
+        Raise(
+            new ProductCreatedDomainEvent(
+                Id,
+                SKU,
+                string.IsNullOrWhiteSpace(Barcode) ? null : Barcode,
+                Name,
+                string.IsNullOrWhiteSpace(Description) ? null : Description,
+                CategoryId,
+                UomId,
+                TaxId,
+                BasePrice,
+                AverageCost,
+                IsService,
+                IsActive,
+                CreatedAt,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseUpdated() =>
+        Raise(
+            new ProductUpdatedDomainEvent(
+                Id,
+                SKU,
+                string.IsNullOrWhiteSpace(Barcode) ? null : Barcode,
+                Name,
+                string.IsNullOrWhiteSpace(Description) ? null : Description,
+                CategoryId,
+                UomId,
+                TaxId,
+                BasePrice,
+                AverageCost,
+                IsService,
+                IsActive,
+                UpdatedAt
+            )
+        );
+
+    public void RaiseDeleted() => Raise(new ProductDeletedDomainEvent(Id));
 }

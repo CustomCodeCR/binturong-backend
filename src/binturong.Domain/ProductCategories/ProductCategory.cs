@@ -12,4 +12,26 @@ public sealed class ProductCategory : Entity
     // Navigation
     public ICollection<Domain.Products.Product> Products { get; set; } =
         new List<Domain.Products.Product>();
+
+    public void RaiseCreated() =>
+        Raise(
+            new ProductCategoryCreatedDomainEvent(
+                Id,
+                Name,
+                string.IsNullOrWhiteSpace(Description) ? null : Description,
+                IsActive
+            )
+        );
+
+    public void RaiseUpdated() =>
+        Raise(
+            new ProductCategoryUpdatedDomainEvent(
+                Id,
+                Name,
+                string.IsNullOrWhiteSpace(Description) ? null : Description,
+                IsActive
+            )
+        );
+
+    public void RaiseDeleted() => Raise(new ProductCategoryDeletedDomainEvent(Id));
 }

@@ -159,10 +159,12 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.Products.Product> Products => Set<Domain.Products.Product>();
     public DbSet<Domain.WarehouseStocks.WarehouseStock> WarehouseStocks =>
         Set<Domain.WarehouseStocks.WarehouseStock>();
-    public DbSet<Domain.InventoryMovementTypes.InventoryMovementType> InventoryMovementTypes =>
-        Set<Domain.InventoryMovementTypes.InventoryMovementType>();
     public DbSet<Domain.InventoryMovements.InventoryMovement> InventoryMovements =>
         Set<Domain.InventoryMovements.InventoryMovement>();
+    public DbSet<Domain.InventoryTransfers.InventoryTransfer> InventoryTransfers =>
+        Set<Domain.InventoryTransfers.InventoryTransfer>();
+    public DbSet<Domain.InventoryTransfers.InventoryTransferLine> InventoryTransferLines =>
+        Set<Domain.InventoryTransfers.InventoryTransferLine>();
 
     public DbSet<Domain.Quotes.Quote> Quotes => Set<Domain.Quotes.Quote>();
     public DbSet<Domain.QuoteDetails.QuoteDetail> QuoteDetails =>

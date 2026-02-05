@@ -14,4 +14,34 @@ public static class BranchErrors
         "Branches.CodeNotUnique",
         "The provided branch code is not unique"
     );
+
+    public static readonly Error CodeIsRequired = Error.Validation(
+        "Branches.CodeIsRequired",
+        "Branch code is required"
+    );
+
+    public static readonly Error NameIsRequired = Error.Validation(
+        "Branches.NameIsRequired",
+        "Branch name is required"
+    );
+
+    public static readonly Error AddressIsRequired = Error.Validation(
+        "Branches.AddressIsRequired",
+        "Branch address is required"
+    );
+
+    public static readonly Error PhoneIsRequired = Error.Validation(
+        "Branches.PhoneIsRequired",
+        "Branch phone is required"
+    );
+
+    public static readonly Error AlreadyActive = Error.Conflict(
+        "Branches.AlreadyActive",
+        "The branch is already active"
+    );
+
+    public static readonly Error AlreadyInactive = Error.Conflict(
+        "Branches.AlreadyInactive",
+        "The branch is already inactive"
+    );
 }

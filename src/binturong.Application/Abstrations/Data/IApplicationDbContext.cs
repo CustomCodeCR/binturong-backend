@@ -18,6 +18,7 @@ using Domain.Employees;
 using Domain.GatewayTransactions;
 using Domain.InventoryMovements;
 using Domain.InventoryMovementTypes;
+using Domain.InventoryTransfers;
 using Domain.InvoiceDetails;
 using Domain.Invoices;
 using Domain.JournalEntries;
@@ -99,8 +100,9 @@ public interface IApplicationDbContext
     // Inventory
     DbSet<Product> Products { get; }
     DbSet<WarehouseStock> WarehouseStocks { get; }
-    DbSet<InventoryMovementType> InventoryMovementTypes { get; }
     DbSet<InventoryMovement> InventoryMovements { get; }
+    DbSet<InventoryTransfer> InventoryTransfers { get; }
+    DbSet<InventoryTransferLine> InventoryTransferLines { get; }
 
     // Quotes / Sales Orders
     DbSet<Quote> Quotes { get; }

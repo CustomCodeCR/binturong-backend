@@ -3,7 +3,7 @@ namespace Application.ReadModels.Inventory;
 public sealed class ProductReadModel
 {
     public string Id { get; init; } = default!; // "product:{ProductId}"
-    public int ProductId { get; init; }
+    public Guid ProductId { get; init; }
 
     public string SKU { get; init; } = default!;
     public string? Barcode { get; init; }
@@ -11,14 +11,14 @@ public sealed class ProductReadModel
     public string Name { get; init; } = default!;
     public string? Description { get; init; }
 
-    public int? CategoryId { get; init; }
+    public Guid? CategoryId { get; init; }
     public string? CategoryName { get; init; }
 
-    public int? UomId { get; init; }
+    public Guid? UomId { get; init; }
     public string? UomCode { get; init; }
     public string? UomName { get; init; }
 
-    public int? TaxId { get; init; }
+    public Guid? TaxId { get; init; }
     public string? TaxCode { get; init; }
     public decimal TaxPercentage { get; init; }
 

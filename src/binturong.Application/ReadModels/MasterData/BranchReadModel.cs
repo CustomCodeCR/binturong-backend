@@ -19,7 +19,7 @@ public sealed class BranchReadModel
 
 public sealed class BranchWarehouseSummaryReadModel
 {
-    public int WarehouseId { get; init; }
+    public Guid WarehouseId { get; init; }
     public string Code { get; init; } = default!;
     public string Name { get; init; } = default!;
     public bool IsActive { get; init; }

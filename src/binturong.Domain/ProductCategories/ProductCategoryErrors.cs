@@ -5,10 +5,7 @@ namespace Domain.ProductCategories;
 public static class ProductCategoryErrors
 {
     public static Error NotFound(Guid categoryId) =>
-        Error.NotFound(
-            "ProductCategories.NotFound",
-            $"The product category with the Id = '{categoryId}' was not found"
-        );
+        Error.NotFound("ProductCategories.NotFound", $"Category '{categoryId}' not found");
 
     public static Error Unauthorized() =>
         Error.Failure(

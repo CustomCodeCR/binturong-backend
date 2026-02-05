@@ -21,6 +21,7 @@ public static class MongoCollections
     public const string Products = "products";
     public const string ProductStocks = "product_stocks";
     public const string InventoryMovements = "inventory_movements";
+    public const string InventoryTransfers = "inventory_transfers";
 
     // ===== SALES =====
     public const string Quotes = "quotes";
