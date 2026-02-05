@@ -3,6 +3,7 @@ using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
 using Application.Features.Suppliers.GetSupplierById;
 using Application.Features.Suppliers.GetSuppliers;
+using Application.Features.Suppliers.SetCreditConditions;
 using Application.Features.Suppliers.Update;
 using Application.ReadModels.CRM;
 
@@ -129,6 +130,31 @@ public sealed class SuppliersEndpoints : IEndpoint
             async (Guid id, ICommandHandler<DeleteSupplierCommand> handler, CancellationToken ct) =>
             {
                 var result = await handler.Handle(new DeleteSupplierCommand(id), ct);
+                return result.IsFailure ? Results.BadRequest(result.Error) : Results.NoContent();
+            }
+        );
+
+        group.MapPut(
+            "/{id:guid}/credit",
+            async (
+                Guid id,
+                SetSupplierCreditRequest req,
+                ICommandHandler<SetSupplierCreditConditionsCommand> handler,
+                CancellationToken ct
+            ) =>
+            {
+                // 🔐 Replace with real authorization later
+                var hasPermission = true;
+
+                var cmd = new SetSupplierCreditConditionsCommand(
+                    id,
+                    req.CreditLimit,
+                    req.CreditDays,
+                    hasPermission
+                );
+
+                var result = await handler.Handle(cmd, ct);
+
                 return result.IsFailure ? Results.BadRequest(result.Error) : Results.NoContent();
             }
         );

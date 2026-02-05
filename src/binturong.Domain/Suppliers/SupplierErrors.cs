@@ -47,4 +47,9 @@ public static class SupplierErrors
         "Suppliers.LegalNameIsRequired",
         "Legal Name is required"
     );
+
+    public static readonly Error CreditExceeded = Error.Failure(
+        "Suppliers.CreditExceeded",
+        "The credit limit exceeds the allowed maximum."
+    );
 }

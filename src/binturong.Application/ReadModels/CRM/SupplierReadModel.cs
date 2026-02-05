@@ -19,6 +19,9 @@ public sealed class SupplierReadModel
     public string? PaymentTerms { get; init; }
     public string? MainCurrency { get; init; }
 
+    public decimal? CreditLimit { get; init; }
+    public int? CreditDays { get; init; }
+
     public bool IsActive { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }

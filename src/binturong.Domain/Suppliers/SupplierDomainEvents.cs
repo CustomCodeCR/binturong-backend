@@ -30,3 +30,10 @@ public sealed record SupplierUpdatedDomainEvent(
 ) : IDomainEvent;
 
 public sealed record SupplierDeletedDomainEvent(Guid SupplierId) : IDomainEvent;
+
+public sealed record SupplierCreditConditionsSetDomainEvent(
+    Guid SupplierId,
+    decimal CreditLimit,
+    int CreditDays,
+    DateTime UpdatedAt
+) : IDomainEvent;

@@ -13,6 +13,8 @@ public sealed class Supplier : Entity
     public string Phone { get; set; } = string.Empty;
     public string PaymentTerms { get; set; } = string.Empty;
     public string MainCurrency { get; set; } = string.Empty;
+    public decimal? CreditLimit { get; private set; }
+    public int? CreditDays { get; private set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -92,5 +94,20 @@ public sealed class Supplier : Entity
         UpdatedAt = DateTime.UtcNow;
 
         RaiseUpdated();
+    }
+
+    public void SetCreditConditions(decimal creditLimit, int creditDays)
+    {
+        if (creditLimit <= 0)
+            throw new InvalidOperationException("Credit limit must be greater than zero.");
+
+        if (creditDays <= 0)
+            throw new InvalidOperationException("Credit days must be greater than zero.");
+
+        CreditLimit = creditLimit;
+        CreditDays = creditDays;
+        UpdatedAt = DateTime.UtcNow;
+
+        Raise(new SupplierCreditConditionsSetDomainEvent(Id, creditLimit, creditDays, UpdatedAt));
     }
 }

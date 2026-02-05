@@ -18,7 +18,8 @@ internal sealed class SupplierProjection
         IProjector<SupplierContactDeletedDomainEvent>,
         IProjector<SupplierPrimaryContactSetDomainEvent>,
         IProjector<SupplierAttachmentUploadedDomainEvent>,
-        IProjector<SupplierAttachmentDeletedDomainEvent>
+        IProjector<SupplierAttachmentDeletedDomainEvent>,
+        IProjector<SupplierCreditConditionsSetDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -224,6 +225,19 @@ internal sealed class SupplierProjection
         var update = Builders<SupplierReadModel>
             .Update.PullFilter(x => x.Attachments, a => a.AttachmentId == e.AttachmentId)
             .Set(x => x.UpdatedAt, DateTime.UtcNow);
+
+        await col.UpdateOneAsync(x => x.Id == id, update, cancellationToken: ct);
+    }
+
+    public async Task ProjectAsync(SupplierCreditConditionsSetDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<SupplierReadModel>(MongoCollections.Suppliers);
+        var id = $"supplier:{e.SupplierId}";
+
+        var update = Builders<SupplierReadModel>
+            .Update.Set(x => x.CreditLimit, e.CreditLimit)
+            .Set(x => x.CreditDays, e.CreditDays)
+            .Set(x => x.UpdatedAt, e.UpdatedAt);
 
         await col.UpdateOneAsync(x => x.Id == id, update, cancellationToken: ct);
     }

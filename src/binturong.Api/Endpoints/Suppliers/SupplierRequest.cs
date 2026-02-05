@@ -21,3 +21,5 @@ public sealed record UpdateSupplierRequest(
     string? MainCurrency,
     bool IsActive
 );
+
+public sealed record SetSupplierCreditRequest(decimal CreditLimit, int CreditDays);
