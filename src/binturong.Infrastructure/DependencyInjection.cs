@@ -1,6 +1,7 @@
 using System.Text;
 using Application.Abstractions.Authentication;
 using Application.Abstractions.Data;
+using Application.Abstractions.Messaging;
 using Application.Abstractions.Outbox;
 using Application.Abstractions.Projections;
 using Application.Abstractions.Security;
@@ -11,6 +12,7 @@ using Infrastructure.Database.Mongo.Migrations;
 using Infrastructure.Database.Outbox;
 using Infrastructure.Database.Postgres;
 using Infrastructure.Database.Postgres.Seed;
+using Infrastructure.Messaging;
 using Infrastructure.Security;
 using Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -74,6 +76,8 @@ public static class DependencyInjection
             Application.Abstractions.Web.IRequestContext,
             Infrastructure.Web.RequestContext
         >();
+
+        services.AddScoped<ICommandBus, CommandBus>();
 
         return services;
     }
