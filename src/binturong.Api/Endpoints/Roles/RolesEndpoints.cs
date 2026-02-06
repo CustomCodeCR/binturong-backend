@@ -7,7 +7,7 @@ using Application.Features.Roles.GetRoles;
 using Application.Features.Roles.SetRoleScopes;
 using Application.Features.Roles.Update;
 using Application.ReadModels.Security;
-using Application.Security;
+using Application.Security.Scopes;
 
 namespace Api.Endpoints.Roles;
 

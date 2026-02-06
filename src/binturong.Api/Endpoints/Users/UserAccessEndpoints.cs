@@ -3,7 +3,7 @@ using Application.Abstractions.Messaging;
 using Application.Features.Users.AssignRole;
 using Application.Features.Users.RemoveRole;
 using Application.Features.Users.SetUserScopes;
-using Application.Security;
+using Application.Security.Scopes;
 
 namespace Api.Endpoints.Users;
 
@@ -25,6 +25,7 @@ public sealed class UserAccessEndpoints : IEndpoint
                 {
                     var cmd = new AssignRoleToUserCommand(id, req.RoleId, req.ReplaceExisting);
                     var result = await handler.Handle(cmd, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -65,6 +66,7 @@ public sealed class UserAccessEndpoints : IEndpoint
                 {
                     var cmd = new SetUserScopesCommand(id, req.ScopeIds);
                     var result = await handler.Handle(cmd, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();

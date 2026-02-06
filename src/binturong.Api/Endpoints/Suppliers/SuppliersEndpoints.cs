@@ -1,3 +1,4 @@
+using Api.Security;
 using Application.Abstractions.Messaging;
 using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
@@ -6,6 +7,7 @@ using Application.Features.Suppliers.GetSuppliers;
 using Application.Features.Suppliers.SetCreditConditions;
 using Application.Features.Suppliers.Update;
 using Application.ReadModels.CRM;
+using Application.Security.Scopes;
 
 namespace Api.Endpoints.Suppliers;
 
@@ -15,148 +17,152 @@ public sealed class SuppliersEndpoints : IEndpoint
     {
         var group = app.MapGroup("/api/suppliers").WithTags("Suppliers");
 
-        // =========================
-        // GET list
-        // /api/suppliers?page=1&pageSize=50&search=acme
-        // =========================
-        group.MapGet(
-            "/",
-            async (
-                int? page,
-                int? pageSize,
-                string? search,
-                IQueryHandler<GetSuppliersQuery, IReadOnlyList<SupplierReadModel>> handler,
-                CancellationToken ct
-            ) =>
-            {
-                var query = new GetSuppliersQuery(page ?? 1, pageSize ?? 50, search);
-                var result = await handler.Handle(query, ct);
+        group
+            .MapGet(
+                "/",
+                async (
+                    int? page,
+                    int? pageSize,
+                    string? search,
+                    IQueryHandler<GetSuppliersQuery, IReadOnlyList<SupplierReadModel>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetSuppliersQuery(page ?? 1, pageSize ?? 50, search);
+                    var result = await handler.Handle(query, ct);
 
-                return result.IsFailure
-                    ? Results.BadRequest(result.Error)
-                    : Results.Ok(result.Value);
-            }
-        );
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
 
-        // =========================
-        // GET by id
-        // /api/suppliers/{id}
-        // =========================
-        group.MapGet(
-            "/{id:guid}",
-            async (
-                Guid id,
-                IQueryHandler<GetSupplierByIdQuery, SupplierReadModel> handler,
-                CancellationToken ct
-            ) =>
-            {
-                var result = await handler.Handle(new GetSupplierByIdQuery(id), ct);
-                return result.IsFailure ? Results.NotFound(result.Error) : Results.Ok(result.Value);
-            }
-        );
+        group
+            .MapGet(
+                "/{id:guid}",
+                async (
+                    Guid id,
+                    IQueryHandler<GetSupplierByIdQuery, SupplierReadModel> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetSupplierByIdQuery(id), ct);
+                    return result.IsFailure
+                        ? Results.NotFound(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
 
-        // =========================
-        // CREATE
-        // POST /api/suppliers
-        // =========================
-        group.MapPost(
-            "/",
-            async (
-                CreateSupplierRequest req,
-                ICommandHandler<CreateSupplierCommand, Guid> handler,
-                CancellationToken ct
-            ) =>
-            {
-                var cmd = new CreateSupplierCommand(
-                    req.IdentificationType,
-                    req.Identification,
-                    req.LegalName,
-                    req.TradeName,
-                    req.Email,
-                    req.Phone,
-                    req.PaymentTerms,
-                    req.MainCurrency,
-                    req.IsActive
-                );
+        group
+            .MapPost(
+                "/",
+                async (
+                    CreateSupplierRequest req,
+                    ICommandHandler<CreateSupplierCommand, Guid> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var cmd = new CreateSupplierCommand(
+                        req.IdentificationType,
+                        req.Identification,
+                        req.LegalName,
+                        req.TradeName,
+                        req.Email,
+                        req.Phone,
+                        req.PaymentTerms,
+                        req.MainCurrency,
+                        req.IsActive
+                    );
 
-                var result = await handler.Handle(cmd, ct);
+                    var result = await handler.Handle(cmd, ct);
 
-                if (result.IsFailure)
-                    return Results.BadRequest(result.Error);
+                    if (result.IsFailure)
+                        return Results.BadRequest(result.Error);
 
-                return Results.Created(
-                    $"/api/suppliers/{result.Value}",
-                    new { supplierId = result.Value }
-                );
-            }
-        );
+                    return Results.Created(
+                        $"/api/suppliers/{result.Value}",
+                        new { supplierId = result.Value }
+                    );
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersCreate);
 
-        // =========================
-        // UPDATE
-        // PUT /api/suppliers/{id}
-        // =========================
-        group.MapPut(
-            "/{id:guid}",
-            async (
-                Guid id,
-                UpdateSupplierRequest req,
-                ICommandHandler<UpdateSupplierCommand> handler,
-                CancellationToken ct
-            ) =>
-            {
-                var cmd = new UpdateSupplierCommand(
-                    id,
-                    req.LegalName,
-                    req.TradeName,
-                    req.Email,
-                    req.Phone,
-                    req.PaymentTerms,
-                    req.MainCurrency,
-                    req.IsActive
-                );
+        group
+            .MapPut(
+                "/{id:guid}",
+                async (
+                    Guid id,
+                    UpdateSupplierRequest req,
+                    ICommandHandler<UpdateSupplierCommand> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var cmd = new UpdateSupplierCommand(
+                        id,
+                        req.LegalName,
+                        req.TradeName,
+                        req.Email,
+                        req.Phone,
+                        req.PaymentTerms,
+                        req.MainCurrency,
+                        req.IsActive
+                    );
 
-                var result = await handler.Handle(cmd, ct);
+                    var result = await handler.Handle(cmd, ct);
 
-                return result.IsFailure ? Results.BadRequest(result.Error) : Results.NoContent();
-            }
-        );
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.NoContent();
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersUpdate);
 
-        // =========================
-        // DELETE
-        // DELETE /api/suppliers/{id}
-        // =========================
-        group.MapDelete(
-            "/{id:guid}",
-            async (Guid id, ICommandHandler<DeleteSupplierCommand> handler, CancellationToken ct) =>
-            {
-                var result = await handler.Handle(new DeleteSupplierCommand(id), ct);
-                return result.IsFailure ? Results.BadRequest(result.Error) : Results.NoContent();
-            }
-        );
+        group
+            .MapDelete(
+                "/{id:guid}",
+                async (
+                    Guid id,
+                    ICommandHandler<DeleteSupplierCommand> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new DeleteSupplierCommand(id), ct);
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.NoContent();
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersDelete);
 
-        group.MapPut(
-            "/{id:guid}/credit",
-            async (
-                Guid id,
-                SetSupplierCreditRequest req,
-                ICommandHandler<SetSupplierCreditConditionsCommand> handler,
-                CancellationToken ct
-            ) =>
-            {
-                // 🔐 Replace with real authorization later
-                var hasPermission = true;
+        group
+            .MapPut(
+                "/{id:guid}/credit",
+                async (
+                    Guid id,
+                    SetSupplierCreditRequest req,
+                    ICommandHandler<SetSupplierCreditConditionsCommand> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    // 🔐 Replace with real authorization later
+                    var hasPermission = true;
 
-                var cmd = new SetSupplierCreditConditionsCommand(
-                    id,
-                    req.CreditLimit,
-                    req.CreditDays,
-                    hasPermission
-                );
+                    var cmd = new SetSupplierCreditConditionsCommand(
+                        id,
+                        req.CreditLimit,
+                        req.CreditDays,
+                        hasPermission
+                    );
 
-                var result = await handler.Handle(cmd, ct);
+                    var result = await handler.Handle(cmd, ct);
 
-                return result.IsFailure ? Results.BadRequest(result.Error) : Results.NoContent();
-            }
-        );
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.NoContent();
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersCreditAssign);
     }
 }

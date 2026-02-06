@@ -1,4 +1,6 @@
+using Api.Security;
 using Application.Abstractions.Security;
+using Application.Security.Scopes;
 
 namespace Api.Endpoints.Security;
 
@@ -17,7 +19,7 @@ public sealed class SecurityEndpoints : IEndpoint
                     return Results.Ok(scopes);
                 }
             )
-            .RequireAuthorization("security.scopes.read");
+            .RequireScope(SecurityScopes.SecurityScopesRead);
 
         group
             .MapPost(
@@ -34,7 +36,7 @@ public sealed class SecurityEndpoints : IEndpoint
                         : Results.NoContent();
                 }
             )
-            .RequireAuthorization("security.admin.reset_password");
+            .RequireScope(SecurityScopes.SecurityAdminResetPassword);
     }
 }
 
