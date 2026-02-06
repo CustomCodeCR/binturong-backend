@@ -179,6 +179,12 @@ public static class ScopeRegistry
         // Auth (usually public)
         // =========================
         new ScopeDefinition("auth.login", "Login"),
+        // =========================
+        // Audit
+        // =========================
+        new ScopeDefinition("audit.read", "View audit logs", Roles.Admin),
+        new ScopeDefinition("audit.write", "Register audit actions", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("audit.export", "Export audit logs", Roles.Admin),
     };
 
     public static class Roles
@@ -189,5 +195,3 @@ public static class ScopeRegistry
         public const string Operator = "Operator";
     }
 }
-
-public sealed record ScopeDefinition(string Code, string Description, params string[] DefaultRoles);

@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Application.ReadModels.Common;
 using Application.ReadModels.CRM;
 using MongoDB.Bson;
@@ -10,9 +13,26 @@ namespace Application.Features.Suppliers.GetSuppliers;
 internal sealed class GetSuppliersQueryHandler
     : IQueryHandler<GetSuppliersQuery, IReadOnlyList<SupplierReadModel>>
 {
-    private readonly IMongoDatabase _db;
+    private const string Module = "Suppliers";
+    private const string Entity = "Supplier";
 
-    public GetSuppliersQueryHandler(IMongoDatabase db) => _db = db;
+    private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public GetSuppliersQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<IReadOnlyList<SupplierReadModel>>> Handle(
         GetSuppliersQuery query,
@@ -29,6 +49,21 @@ internal sealed class GetSuppliersQueryHandler
             .Limit(query.Take)
             .ToListAsync(ct);
 
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId, // Guid? userId
+                Module,
+                Entity,
+                null, // Guid? entityId (list)
+                "SUPPLIERS_READ",
+                string.Empty,
+                $"search={query.Search ?? ""}; skip={query.Skip}; take={query.Take}; returned={docs.Count}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
+
         return Result.Success<IReadOnlyList<SupplierReadModel>>(docs);
     }
 
@@ -38,7 +73,6 @@ internal sealed class GetSuppliersQueryHandler
             return Builders<SupplierReadModel>.Filter.Empty;
 
         var s = search.Trim();
-
         var re = new BsonRegularExpression(s, "i");
 
         return Builders<SupplierReadModel>.Filter.Or(

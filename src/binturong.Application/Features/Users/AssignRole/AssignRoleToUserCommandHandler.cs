@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.Roles;
 using Domain.UserRoles;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +12,26 @@ namespace Application.Features.Users.AssignRole;
 
 internal sealed class AssignRoleToUserCommandHandler : ICommandHandler<AssignRoleToUserCommand>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Users";
+    private const string Entity = "User";
 
-    public AssignRoleToUserCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public AssignRoleToUserCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(AssignRoleToUserCommand command, CancellationToken ct)
     {
@@ -32,6 +52,7 @@ internal sealed class AssignRoleToUserCommandHandler : ICommandHandler<AssignRol
             foreach (var ur in current)
             {
                 _db.UserRoles.Remove(ur);
+
                 var tmp = new Domain.Users.User { Id = command.UserId };
                 tmp.Raise(new UserRoleRemovedDomainEvent(command.UserId, ur.RoleId));
             }
@@ -54,6 +75,21 @@ internal sealed class AssignRoleToUserCommandHandler : ICommandHandler<AssignRol
 
         _db.UserRoles.Add(userRole);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId, // who executed
+                Module,
+                Entity,
+                command.UserId, // entityId = affected user
+                command.ReplaceExisting ? "USER_ROLE_REPLACED" : "USER_ROLE_ASSIGNED",
+                string.Empty,
+                $"targetUserId={command.UserId}; roleId={command.RoleId}; replaceExisting={command.ReplaceExisting}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success();
     }

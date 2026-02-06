@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.Warehouses;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -8,9 +11,26 @@ namespace Application.Features.Warehouses.Create;
 
 internal sealed class CreateWarehouseCommandHandler : ICommandHandler<CreateWarehouseCommand, Guid>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Warehouses";
+    private const string Entity = "Warehouse";
 
-    public CreateWarehouseCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public CreateWarehouseCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<Guid>> Handle(CreateWarehouseCommand command, CancellationToken ct)
     {
@@ -68,6 +88,21 @@ internal sealed class CreateWarehouseCommandHandler : ICommandHandler<CreateWare
 
         _db.Warehouses.Add(wh);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId,
+                Module,
+                Entity,
+                wh.Id,
+                "WAREHOUSE_CREATED",
+                string.Empty,
+                $"warehouseId={wh.Id}; branchId={wh.BranchId}; code={wh.Code}; name={wh.Name}; isActive={wh.IsActive}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success(wh.Id);
     }

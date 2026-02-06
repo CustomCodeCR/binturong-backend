@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.Payroll;
 using MongoDB.Driver;
@@ -10,8 +13,22 @@ internal sealed class GetEmployeesQueryHandler
     : IQueryHandler<GetEmployeesQuery, IReadOnlyList<EmployeeReadModel>>
 {
     private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
-    public GetEmployeesQueryHandler(IMongoDatabase db) => _db = db;
+    public GetEmployeesQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<IReadOnlyList<EmployeeReadModel>>> Handle(
         GetEmployeesQuery query,
@@ -42,6 +59,19 @@ internal sealed class GetEmployeesQueryHandler
         }
 
         var docs = await col.Find(filter).Skip(query.Skip).Limit(query.Take).ToListAsync(ct);
+
+        await _bus.AuditAsync(
+            _currentUser.UserId,
+            "Employees",
+            "Employee",
+            null,
+            "EMPLOYEE_LIST_READ",
+            string.Empty,
+            $"search={query.Search}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
+            _request.IpAddress,
+            _request.UserAgent,
+            ct
+        );
 
         return Result.Success<IReadOnlyList<EmployeeReadModel>>(docs);
     }

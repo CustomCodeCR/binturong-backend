@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.Taxes;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -8,11 +11,25 @@ namespace Application.Features.Taxes.Create;
 
 internal sealed class CreateTaxCommandHandler : ICommandHandler<CreateTaxCommand, Guid>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Taxes";
+    private const string Entity = "Tax";
 
-    public CreateTaxCommandHandler(IApplicationDbContext db)
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public CreateTaxCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
     {
         _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<Guid>> Handle(CreateTaxCommand command, CancellationToken ct)
@@ -50,6 +67,21 @@ internal sealed class CreateTaxCommandHandler : ICommandHandler<CreateTaxCommand
 
         _db.Taxes.Add(tax);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId, // Guid? userId
+                Module, // string module
+                Entity, // string entity
+                tax.Id, // Guid? entityId
+                "TAX_CREATED", // string action
+                string.Empty, // dataBefore
+                $"taxId={tax.Id}; code={tax.Code}; name={tax.Name}; percentage={tax.Percentage}; isActive={tax.IsActive}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success(tax.Id);
     }

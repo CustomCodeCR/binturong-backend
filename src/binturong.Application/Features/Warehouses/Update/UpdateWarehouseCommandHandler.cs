@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
 
@@ -7,9 +10,26 @@ namespace Application.Features.Warehouses.Update;
 
 internal sealed class UpdateWarehouseCommandHandler : ICommandHandler<UpdateWarehouseCommand>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Warehouses";
+    private const string Entity = "Warehouse";
 
-    public UpdateWarehouseCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public UpdateWarehouseCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(UpdateWarehouseCommand command, CancellationToken ct)
     {
@@ -27,6 +47,9 @@ internal sealed class UpdateWarehouseCommandHandler : ICommandHandler<UpdateWare
             return Result.Failure(
                 Error.NotFound("Branches.NotFound", $"Branch '{wh.BranchId}' not found")
             );
+
+        var before =
+            $"warehouseId={wh.Id}; branchId={wh.BranchId}; code={wh.Code}; name={wh.Name}; description={wh.Description}; isActive={wh.IsActive}";
 
         var code = command.Code.Trim();
         var name = command.Name.Trim();
@@ -65,6 +88,25 @@ internal sealed class UpdateWarehouseCommandHandler : ICommandHandler<UpdateWare
         wh.RaiseUpdated(branch.Code, branch.Name);
 
         await _db.SaveChangesAsync(ct);
+
+        var after =
+            $"warehouseId={wh.Id}; branchId={wh.BranchId}; code={wh.Code}; name={wh.Name}; description={wh.Description}; isActive={wh.IsActive}";
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId,
+                Module,
+                Entity,
+                command.WarehouseId,
+                "WAREHOUSE_UPDATED",
+                before,
+                after,
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
+
         return Result.Success();
     }
 }

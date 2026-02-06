@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.MasterData;
 using MongoDB.Driver;
@@ -10,8 +13,22 @@ internal sealed class GetBranchesQueryHandler
     : IQueryHandler<GetBranchesQuery, IReadOnlyList<BranchReadModel>>
 {
     private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
-    public GetBranchesQueryHandler(IMongoDatabase db) => _db = db;
+    public GetBranchesQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<IReadOnlyList<BranchReadModel>>> Handle(
         GetBranchesQuery query,
@@ -28,6 +45,19 @@ internal sealed class GetBranchesQueryHandler
             .Limit(query.Take)
             .ToListAsync(ct);
 
+        await _bus.AuditAsync(
+            _currentUser.UserId,
+            "Branches",
+            "Branch",
+            null,
+            "BRANCH_LIST_READ",
+            string.Empty,
+            $"search={query.Search}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
+            _request.IpAddress,
+            _request.UserAgent,
+            ct
+        );
+
         return Result.Success<IReadOnlyList<BranchReadModel>>(docs);
     }
 
@@ -38,7 +68,6 @@ internal sealed class GetBranchesQueryHandler
 
         var s = search.Trim();
 
-        // OR over relevant fields
         return Builders<BranchReadModel>.Filter.Or(
             Builders<BranchReadModel>.Filter.Regex(
                 x => x.Code,

@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.UnitsOfMeasure;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -9,9 +12,26 @@ namespace Application.Features.UnitsOfMeasure.Create;
 internal sealed class CreateUnitOfMeasureCommandHandler
     : ICommandHandler<CreateUnitOfMeasureCommand, Guid>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "UnitsOfMeasure";
+    private const string Entity = "UnitOfMeasure";
 
-    public CreateUnitOfMeasureCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public CreateUnitOfMeasureCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<Guid>> Handle(CreateUnitOfMeasureCommand command, CancellationToken ct)
     {
@@ -44,6 +64,21 @@ internal sealed class CreateUnitOfMeasureCommandHandler
 
         _db.UnitsOfMeasure.Add(uom);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId, // Guid? userId
+                Module,
+                Entity,
+                uom.Id, // Guid? entityId
+                "UOM_CREATED",
+                string.Empty,
+                $"uomId={uom.Id}; code={uom.Code}; name={uom.Name}; isActive={uom.IsActive}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success(uom.Id);
     }

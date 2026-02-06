@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -8,9 +11,26 @@ namespace Application.Features.Users.Update;
 
 internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserCommand>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Users";
+    private const string Entity = "User";
 
-    public UpdateUserCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public UpdateUserCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(UpdateUserCommand command, CancellationToken ct)
     {
@@ -18,10 +38,12 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
         if (user is null)
             return Result.Failure(UserErrors.NotFound(command.UserId));
 
+        var before =
+            $"userId={user.Id}; username={user.Username}; email={user.Email}; isActive={user.IsActive}; mustChangePassword={user.MustChangePassword}; failedAttempts={user.FailedAttempts}; lockedUntil={user.LockedUntil}";
+
         var email = command.Email.Trim().ToLowerInvariant();
         var username = command.Username.Trim();
 
-        // Email unique (except self)
         var emailExists = await _db.Users.AnyAsync(
             x => x.Id != command.UserId && x.Email.ToLower() == email,
             ct
@@ -29,7 +51,6 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
         if (emailExists)
             return Result.Failure(UserErrors.EmailNotUnique);
 
-        // Username unique (except self)
         var usernameExists = await _db.Users.AnyAsync(
             x => x.Id != command.UserId && x.Username == username,
             ct
@@ -46,10 +67,27 @@ internal sealed class UpdateUserCommandHandler : ICommandHandler<UpdateUserComma
         user.LockedUntil = command.LockedUntil;
         user.UpdatedAt = DateTime.UtcNow;
 
-        // Domain event -> Outbox -> Mongo projection
         user.RaiseUpdated();
 
         await _db.SaveChangesAsync(ct);
+
+        var after =
+            $"userId={user.Id}; username={user.Username}; email={user.Email}; isActive={user.IsActive}; mustChangePassword={user.MustChangePassword}; failedAttempts={user.FailedAttempts}; lockedUntil={user.LockedUntil}";
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId,
+                Module,
+                Entity,
+                command.UserId,
+                "USER_UPDATED",
+                before,
+                after,
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success();
     }

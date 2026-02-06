@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.Inventory;
 using MongoDB.Driver;
@@ -10,8 +13,22 @@ internal sealed class GetInventoryTransferByIdQueryHandler
     : IQueryHandler<GetInventoryTransferByIdQuery, InventoryTransferReadModel>
 {
     private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
-    public GetInventoryTransferByIdQueryHandler(IMongoDatabase db) => _db = db;
+    public GetInventoryTransferByIdQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<InventoryTransferReadModel>> Handle(
         GetInventoryTransferByIdQuery query,
@@ -32,6 +49,19 @@ internal sealed class GetInventoryTransferByIdQueryHandler
                     $"Transfer '{query.TransferId}' not found"
                 )
             );
+
+        await _bus.AuditAsync(
+            _currentUser.UserId,
+            "InventoryTransfers",
+            "InventoryTransfer",
+            query.TransferId,
+            "TRANSFER_READ",
+            string.Empty,
+            $"transferId={query.TransferId}",
+            _request.IpAddress,
+            _request.UserAgent,
+            ct
+        );
 
         return Result.Success(doc);
     }

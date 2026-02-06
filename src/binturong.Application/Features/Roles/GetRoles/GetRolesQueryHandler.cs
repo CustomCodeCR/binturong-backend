@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.Security;
 using MongoDB.Driver;
@@ -10,8 +13,22 @@ internal sealed class GetRolesQueryHandler
     : IQueryHandler<GetRolesQuery, IReadOnlyList<RoleReadModel>>
 {
     private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
-    public GetRolesQueryHandler(IMongoDatabase db) => _db = db;
+    public GetRolesQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<IReadOnlyList<RoleReadModel>>> Handle(
         GetRolesQuery query,
@@ -38,6 +55,20 @@ internal sealed class GetRolesQueryHandler
         }
 
         var docs = await col.Find(f).Skip(query.Skip).Limit(query.Take).ToListAsync(ct);
-        return Result.Success((IReadOnlyList<RoleReadModel>)docs);
+
+        await _bus.AuditAsync(
+            _currentUser.UserId,
+            "Roles",
+            "Role",
+            null,
+            "ROLE_LIST_READ",
+            string.Empty,
+            $"search={query.Search}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
+            _request.IpAddress,
+            _request.UserAgent,
+            ct
+        );
+
+        return Result.Success<IReadOnlyList<RoleReadModel>>(docs);
     }
 }

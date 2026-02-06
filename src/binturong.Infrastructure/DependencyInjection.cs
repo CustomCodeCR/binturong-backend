@@ -70,6 +70,11 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
+        services.AddScoped<
+            Application.Abstractions.Web.IRequestContext,
+            Infrastructure.Web.RequestContext
+        >();
+
         return services;
     }
 

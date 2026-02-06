@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.Suppliers;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -9,11 +12,32 @@ namespace Application.Features.Suppliers.Create;
 internal sealed class CreateSupplierCommandHandler : ICommandHandler<CreateSupplierCommand, Guid>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
-    public CreateSupplierCommandHandler(IApplicationDbContext db) => _db = db;
+    private const string Module = "Suppliers";
+    private const string Entity = "Supplier";
+
+    public CreateSupplierCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<Guid>> Handle(CreateSupplierCommand command, CancellationToken ct)
     {
+        var userId = _currentUser.UserId;
+        var ip = _request.IpAddress;
+        var ua = _request.UserAgent;
+
         var identification = command.Identification.Trim();
         var email = command.Email.Trim().ToLowerInvariant();
 
@@ -35,14 +59,48 @@ internal sealed class CreateSupplierCommandHandler : ICommandHandler<CreateSuppl
         // Uniqueness checks
         var emailExists = await _db.Suppliers.AnyAsync(x => x.Email.ToLower() == email, ct);
         if (emailExists)
+        {
+            await _bus.Send(
+                new CreateAuditLogCommand(
+                    userId,
+                    Module,
+                    Entity,
+                    EntityId: null,
+                    Action: "SUPPLIER_CREATE_FAILED",
+                    DataBefore: string.Empty,
+                    DataAfter: $"reason=email_not_unique; email={email}",
+                    ip,
+                    ua
+                ),
+                ct
+            );
+
             return Result.Failure<Guid>(SupplierErrors.EmailNotUnique);
+        }
 
         var identificationExists = await _db.Suppliers.AnyAsync(
             x => x.Identification == identification,
             ct
         );
         if (identificationExists)
+        {
+            await _bus.Send(
+                new CreateAuditLogCommand(
+                    userId,
+                    Module,
+                    Entity,
+                    EntityId: null,
+                    Action: "SUPPLIER_CREATE_FAILED",
+                    DataBefore: string.Empty,
+                    DataAfter: $"reason=identification_not_unique; identification={identification}",
+                    ip,
+                    ua
+                ),
+                ct
+            );
+
             return Result.Failure<Guid>(SupplierErrors.IdentificationNotUnique);
+        }
 
         var now = DateTime.UtcNow;
 
@@ -66,6 +124,21 @@ internal sealed class CreateSupplierCommandHandler : ICommandHandler<CreateSuppl
 
         _db.Suppliers.Add(supplier);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                userId,
+                Module,
+                Entity,
+                supplier.Id,
+                "SUPPLIER_CREATED",
+                DataBefore: string.Empty,
+                DataAfter: $"supplierId={supplier.Id}; tradeName={supplier.TradeName}; legalName={supplier.LegalName}; email={supplier.Email}; isActive={supplier.IsActive}",
+                ip,
+                ua
+            ),
+            ct
+        );
 
         return Result.Success(supplier.Id);
     }

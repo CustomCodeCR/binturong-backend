@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Domain.InventoryMovements;
 using Domain.InventoryMovementTypes;
 using Domain.InventoryTransfers;
@@ -13,56 +16,105 @@ internal sealed class ConfirmInventoryTransferCommandHandler
     : ICommandHandler<ConfirmInventoryTransferCommand>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
     private const string SourceModule = "BranchTransfer";
 
-    public ConfirmInventoryTransferCommandHandler(IApplicationDbContext db) => _db = db;
+    public ConfirmInventoryTransferCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(ConfirmInventoryTransferCommand command, CancellationToken ct)
     {
+        var ip = _request.IpAddress;
+        var ua = _request.UserAgent;
+        var userId = _currentUser.UserId;
+
         var transfer = await _db
             .InventoryTransfers.Include(x => x.Lines)
             .FirstOrDefaultAsync(x => x.Id == command.TransferId, ct);
 
         if (transfer is null)
+        {
+            await _bus.AuditAsync(
+                userId,
+                "InventoryTransfers",
+                "InventoryTransfer",
+                command.TransferId,
+                "TRANSFER_CONFIRM_FAILED",
+                string.Empty,
+                $"reason=not_found; transferId={command.TransferId}",
+                ip,
+                ua,
+                ct
+            );
+
             return Result.Failure(InventoryTransferErrors.NotFound(command.TransferId));
+        }
+
+        var before =
+            $"status={transfer.Status}; requireApproval={command.RequireApproval}; lines={transfer.Lines.Count}";
 
         // Approval flow
         if (command.RequireApproval)
         {
             if (transfer.Status == InventoryTransferStatus.Draft)
-                return Result.Failure(InventoryTransferErrors.RequiresApproval);
+                return await Fail("requires_approval_draft");
 
             if (transfer.Status != InventoryTransferStatus.Approved)
-                return Result.Failure(InventoryTransferErrors.RequiresApproval);
+                return await Fail("requires_approval_not_approved");
         }
 
-        // If not requiring approval: allow Draft or Approved (your call)
         if (!command.RequireApproval)
         {
             if (
                 transfer.Status != InventoryTransferStatus.Draft
                 && transfer.Status != InventoryTransferStatus.Approved
             )
-                return Result.Failure(InventoryTransferErrors.InvalidStatus);
+                return await Fail("invalid_status");
         }
 
         var now = DateTime.UtcNow;
+        var movementCount = 0;
 
         foreach (var line in transfer.Lines)
         {
-            // FROM stock
             var fromStock = await _db.WarehouseStocks.FirstOrDefaultAsync(
                 x => x.ProductId == line.ProductId && x.WarehouseId == line.FromWarehouseId,
                 ct
             );
 
             if (fromStock is null || fromStock.CurrentStock < line.Quantity)
+            {
+                await _bus.AuditAsync(
+                    userId,
+                    "InventoryTransfers",
+                    "InventoryTransfer",
+                    transfer.Id,
+                    "TRANSFER_CONFIRM_FAILED",
+                    before,
+                    $"reason=stock_insufficient; productId={line.ProductId}; fromWarehouseId={line.FromWarehouseId}; qty={line.Quantity}; currentStock={fromStock?.CurrentStock}",
+                    ip,
+                    ua,
+                    ct
+                );
+
                 return Result.Failure(
                     InventoryTransferErrors.StockInsufficient(line.ProductId, line.FromWarehouseId)
                 );
+            }
 
-            // TO stock upsert
             var toStock = await _db.WarehouseStocks.FirstOrDefaultAsync(
                 x => x.ProductId == line.ProductId && x.WarehouseId == line.ToWarehouseId,
                 ct
@@ -141,6 +193,7 @@ internal sealed class ConfirmInventoryTransferCommandHandler
             );
 
             _db.InventoryMovements.Add(movement);
+            movementCount += 1;
         }
 
         transfer.Status = InventoryTransferStatus.Completed;
@@ -148,6 +201,38 @@ internal sealed class ConfirmInventoryTransferCommandHandler
         transfer.RaiseConfirmed();
 
         await _db.SaveChangesAsync(ct);
+
+        await _bus.AuditAsync(
+            userId,
+            "InventoryTransfers",
+            "InventoryTransfer",
+            transfer.Id,
+            "TRANSFER_CONFIRMED",
+            before,
+            $"status={transfer.Status}; movementCount={movementCount}; sourceModule={SourceModule}",
+            ip,
+            ua,
+            ct
+        );
+
         return Result.Success();
+
+        async Task<Result> Fail(string reason)
+        {
+            await _bus.AuditAsync(
+                userId,
+                "InventoryTransfers",
+                "InventoryTransfer",
+                transfer.Id,
+                "TRANSFER_CONFIRM_FAILED",
+                before,
+                $"reason={reason}; status={transfer.Status}",
+                ip,
+                ua,
+                ct
+            );
+
+            return Result.Failure(InventoryTransferErrors.RequiresApproval);
+        }
     }
 }

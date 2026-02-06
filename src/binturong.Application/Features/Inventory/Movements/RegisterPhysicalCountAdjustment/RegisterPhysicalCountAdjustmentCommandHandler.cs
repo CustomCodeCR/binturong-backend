@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Common.Audit;
 using Domain.Inventory;
 using Domain.InventoryMovements;
 using Domain.InventoryMovementTypes;
@@ -13,22 +16,70 @@ internal sealed class RegisterPhysicalCountAdjustmentCommandHandler
     : ICommandHandler<RegisterPhysicalCountAdjustmentCommand, Guid>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
 
     private const string SourceModule = "InventoryAudit";
 
-    public RegisterPhysicalCountAdjustmentCommandHandler(IApplicationDbContext db) => _db = db;
+    public RegisterPhysicalCountAdjustmentCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<Guid>> Handle(
         RegisterPhysicalCountAdjustmentCommand command,
         CancellationToken ct
     )
     {
+        var ip = _request.IpAddress;
+        var ua = _request.UserAgent;
+        var userId = _currentUser.UserId;
+
         if (command.CountedStock < 0)
+        {
+            await _bus.AuditAsync(
+                userId,
+                "Inventory",
+                "InventoryMovement",
+                null,
+                "INVENTORY_PHYSICAL_COUNT_ADJUSTMENT_FAILED",
+                string.Empty,
+                $"reason=invalid_counted_stock; productId={command.ProductId}; warehouseId={command.WarehouseId}; countedStock={command.CountedStock}",
+                ip,
+                ua,
+                ct
+            );
+
             return Result.Failure<Guid>(InventoryErrors.InvalidCountedStock);
+        }
 
         var warehouseExists = await _db.Warehouses.AnyAsync(x => x.Id == command.WarehouseId, ct);
         if (!warehouseExists)
+        {
+            await _bus.AuditAsync(
+                userId,
+                "Inventory",
+                "InventoryMovement",
+                null,
+                "INVENTORY_PHYSICAL_COUNT_ADJUSTMENT_FAILED",
+                string.Empty,
+                $"reason=warehouse_not_found; productId={command.ProductId}; warehouseId={command.WarehouseId}; countedStock={command.CountedStock}",
+                ip,
+                ua,
+                ct
+            );
+
             return Result.Failure<Guid>(InventoryErrors.WarehouseNotFound(command.WarehouseId));
+        }
 
         var now = DateTime.UtcNow;
 
@@ -51,11 +102,27 @@ internal sealed class RegisterPhysicalCountAdjustmentCommandHandler
             _db.WarehouseStocks.Add(stock);
         }
 
+        var beforeStock = stock.CurrentStock;
+
         var diff = command.CountedStock - stock.CurrentStock;
         if (diff == 0m)
-            return Result.Success(Guid.Empty); // no movement needed (optional behavior)
+        {
+            await _bus.AuditAsync(
+                userId,
+                "Inventory",
+                "InventoryMovement",
+                null,
+                "INVENTORY_PHYSICAL_COUNT_ADJUSTMENT_NOOP",
+                string.Empty,
+                $"productId={command.ProductId}; warehouseId={command.WarehouseId}; countedStock={command.CountedStock}; beforeStock={beforeStock}; diff=0",
+                ip,
+                ua,
+                ct
+            );
 
-        // apply stock
+            return Result.Success(Guid.Empty);
+        }
+
         stock.CurrentStock = command.CountedStock;
 
         var movementType =
@@ -106,6 +173,19 @@ internal sealed class RegisterPhysicalCountAdjustmentCommandHandler
 
         _db.InventoryMovements.Add(movement);
         await _db.SaveChangesAsync(ct);
+
+        await _bus.AuditAsync(
+            userId,
+            "Inventory",
+            "InventoryMovement",
+            movement.Id,
+            "INVENTORY_PHYSICAL_COUNT_ADJUSTMENT_REGISTERED",
+            $"productId={command.ProductId}; warehouseId={command.WarehouseId}; beforeStock={beforeStock}",
+            $"movementId={movement.Id}; movementType={movementType}; qty={movement.Quantity}; unitCost={movement.UnitCost}; countedStock={command.CountedStock}; diff={diff}; sourceModule={SourceModule}; notes={movement.Notes}",
+            ip,
+            ua,
+            ct
+        );
 
         return Result.Success(movement.Id);
     }

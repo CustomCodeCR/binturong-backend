@@ -1,5 +1,8 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Domain.UserScopes;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -8,9 +11,26 @@ namespace Application.Features.Users.SetUserScopes;
 
 internal sealed class SetUserScopesCommandHandler : ICommandHandler<SetUserScopesCommand>
 {
-    private readonly IApplicationDbContext _db;
+    private const string Module = "Users";
+    private const string Entity = "User";
 
-    public SetUserScopesCommandHandler(IApplicationDbContext db) => _db = db;
+    private readonly IApplicationDbContext _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public SetUserScopesCommandHandler(
+        IApplicationDbContext db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(SetUserScopesCommand command, CancellationToken ct)
     {
@@ -31,6 +51,9 @@ internal sealed class SetUserScopesCommandHandler : ICommandHandler<SetUserScope
         var existingSet = existing.Select(x => x.ScopeId).ToHashSet();
         var desired = command.ScopeIds.ToHashSet();
 
+        var removed = new List<Guid>();
+        var added = new List<Guid>();
+
         var toRemove = existing.Where(x => !desired.Contains(x.ScopeId)).ToList();
         foreach (var us in toRemove)
         {
@@ -42,6 +65,7 @@ internal sealed class SetUserScopesCommandHandler : ICommandHandler<SetUserScope
             u.Raise(new UserScopeRemovedDomainEvent(command.UserId, us.ScopeId, sc.Code));
 
             _db.UserScopes.Remove(us);
+            removed.Add(us.ScopeId);
         }
 
         var toAdd = scopes.Where(s => !existingSet.Contains(s.Id)).ToList();
@@ -58,9 +82,26 @@ internal sealed class SetUserScopesCommandHandler : ICommandHandler<SetUserScope
             u.Raise(new UserScopeAssignedDomainEvent(command.UserId, sc.Id, sc.Code));
 
             _db.UserScopes.Add(us);
+            added.Add(sc.Id);
         }
 
         await _db.SaveChangesAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId,
+                Module,
+                Entity,
+                command.UserId,
+                "USER_SCOPES_SET",
+                string.Empty,
+                $"targetUserId={command.UserId}; added=[{string.Join(",", added)}]; removed=[{string.Join(",", removed)}]; desiredCount={command.ScopeIds.Count}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
+
         return Result.Success();
     }
 }

@@ -1,4 +1,7 @@
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
+using Application.Abstractions.Web;
+using Application.Features.Audit.Create;
 using Application.ReadModels.Common;
 using Application.ReadModels.Security;
 using MongoDB.Driver;
@@ -9,9 +12,26 @@ namespace Application.Features.Users.GetUsers;
 internal sealed class GetUsersQueryHandler
     : IQueryHandler<GetUsersQuery, IReadOnlyList<UserReadModel>>
 {
-    private readonly IMongoDatabase _db;
+    private const string Module = "Users";
+    private const string Entity = "User";
 
-    public GetUsersQueryHandler(IMongoDatabase db) => _db = db;
+    private readonly IMongoDatabase _db;
+    private readonly ICommandBus _bus;
+    private readonly IRequestContext _request;
+    private readonly ICurrentUser _currentUser;
+
+    public GetUsersQueryHandler(
+        IMongoDatabase db,
+        ICommandBus bus,
+        IRequestContext request,
+        ICurrentUser currentUser
+    )
+    {
+        _db = db;
+        _bus = bus;
+        _request = request;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result<IReadOnlyList<UserReadModel>>> Handle(
         GetUsersQuery query,
@@ -24,7 +44,6 @@ internal sealed class GetUsersQueryHandler
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
-            // Ajustá campos según tu UserReadModel real
             var s = query.Search.Trim();
             filter = Builders<UserReadModel>.Filter.Or(
                 Builders<UserReadModel>.Filter.Regex(
@@ -43,6 +62,21 @@ internal sealed class GetUsersQueryHandler
             .Skip(query.Skip)
             .Limit(query.PageSize)
             .ToListAsync(ct);
+
+        await _bus.Send(
+            new CreateAuditLogCommand(
+                _currentUser.UserId,
+                Module,
+                Entity,
+                null,
+                "USERS_READ",
+                string.Empty,
+                $"search={query.Search ?? ""}; skip={query.Skip}; pageSize={query.PageSize}; returned={docs.Count}",
+                _request.IpAddress,
+                _request.UserAgent
+            ),
+            ct
+        );
 
         return Result.Success((IReadOnlyList<UserReadModel>)docs);
     }
