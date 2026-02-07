@@ -4,14 +4,28 @@ namespace Domain.Quotes;
 
 public static class QuoteErrors
 {
-    public static Error NotFound(Guid quoteId) =>
-        Error.NotFound("Quotes.NotFound", $"The quote with the Id = '{quoteId}' was not found");
+    public static readonly Error ClientRequired = Error.Validation(
+        "Quotes.ClientRequired",
+        "Client is required"
+    );
 
-    public static Error Unauthorized() =>
-        Error.Failure("Quotes.Unauthorized", "You are not authorized to perform this action.");
+    public static readonly Error NoDetails = Error.Validation(
+        "Quotes.NoDetails",
+        "Quote must have at least one line"
+    );
 
-    public static readonly Error CodeNotUnique = Error.Conflict(
-        "Quotes.CodeNotUnique",
-        "The provided quote code is not unique"
+    public static readonly Error InvalidPrice = Error.Validation(
+        "Quotes.InvalidPrice",
+        "All lines must have a price"
+    );
+
+    public static readonly Error InvalidState = Error.Conflict(
+        "Quotes.InvalidState",
+        "Invalid quote state for this action"
+    );
+
+    public static readonly Error ClientEmailMissing = Error.Validation(
+        "Quotes.ClientEmailMissing",
+        "Client email is missing"
     );
 }

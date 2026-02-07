@@ -4,15 +4,18 @@ namespace Domain.QuoteDetails;
 
 public static class QuoteDetailErrors
 {
-    public static Error NotFound(Guid quoteDetailId) =>
-        Error.NotFound(
-            "QuoteDetails.NotFound",
-            $"The quote detail with the Id = '{quoteDetailId}' was not found"
-        );
+    public static readonly Error QuantityInvalid = Error.Validation(
+        "QuoteDetails.QuantityInvalid",
+        "Quantity must be greater than zero"
+    );
 
-    public static Error Unauthorized() =>
-        Error.Failure(
-            "QuoteDetails.Unauthorized",
-            "You are not authorized to perform this action."
-        );
+    public static readonly Error PriceInvalid = Error.Validation(
+        "QuoteDetails.PriceInvalid",
+        "Unit price must be greater than zero"
+    );
+
+    public static readonly Error NoLines = Error.Validation(
+        "QuoteDetails.NoLines",
+        "At least one line is required"
+    );
 }

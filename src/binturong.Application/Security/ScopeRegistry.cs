@@ -185,6 +185,38 @@ public static class ScopeRegistry
         new ScopeDefinition("audit.read", "View audit logs", Roles.Admin),
         new ScopeDefinition("audit.write", "Register audit actions", Roles.Admin, Roles.Manager),
         new ScopeDefinition("audit.export", "Export audit logs", Roles.Admin),
+        // =========================
+        // Quotes (Sales)
+        // =========================
+        new ScopeDefinition(
+            "quotes.read",
+            "View quotes",
+            Roles.Admin,
+            Roles.Manager,
+            Roles.Operator
+        ),
+        new ScopeDefinition("quotes.create", "Create quotes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("quotes.update", "Update quotes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("quotes.delete", "Delete quotes", Roles.Admin),
+        // Lifecycle actions
+        new ScopeDefinition("quotes.send", "Send quote", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("quotes.accept", "Accept quote", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("quotes.reject", "Reject quote", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("quotes.expire", "Expire quote", Roles.Admin, Roles.Manager),
+        // Details (lines)
+        new ScopeDefinition("quotes.details.add", "Add quote line", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "quotes.details.update",
+            "Update quote line",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "quotes.details.delete",
+            "Delete quote line",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("binturong.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+adf2405c74c46b0b4c7e42c6e2f9fea2adc50c2d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a56361fbb899707e0fd7842ae87dbfab71223b58")]
 [assembly: System.Reflection.AssemblyProductAttribute("binturong.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("binturong.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -2529,6 +2529,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("code");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -2575,6 +2579,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("total");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<DateTime>("ValidUntil")
                         .HasColumnType("timestamp with time zone")

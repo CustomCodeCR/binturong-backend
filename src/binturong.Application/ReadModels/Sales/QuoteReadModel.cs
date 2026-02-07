@@ -3,13 +3,13 @@ namespace Application.ReadModels.Sales;
 public sealed class QuoteReadModel
 {
     public string Id { get; init; } = default!; // "quote:{QuoteId}"
-    public int QuoteId { get; init; }
+    public Guid QuoteId { get; init; }
     public string Code { get; init; } = default!;
 
-    public int ClientId { get; init; }
+    public Guid ClientId { get; init; }
     public string ClientName { get; init; } = default!;
 
-    public int? BranchId { get; init; }
+    public Guid? BranchId { get; init; }
     public string? BranchName { get; init; }
 
     public DateTime IssueDate { get; init; }
@@ -34,9 +34,9 @@ public sealed class QuoteReadModel
 
 public sealed class QuoteLineReadModel
 {
-    public int QuoteDetailId { get; init; }
+    public Guid QuoteDetailId { get; init; }
 
-    public int ProductId { get; init; }
+    public Guid ProductId { get; init; }
     public string ProductName { get; init; } = default!;
 
     public decimal Quantity { get; init; }
