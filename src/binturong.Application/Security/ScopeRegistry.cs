@@ -217,6 +217,114 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        // =========================
+        // Accounts Payable
+        // =========================
+        new ScopeDefinition(
+            "accounts_payable.read",
+            "View accounts payable",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounts_payable.payments.create",
+            "Register accounts payable payment",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Supplier Quotes
+        // =========================
+        new ScopeDefinition(
+            "supplier_quotes.read",
+            "View supplier quotes",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "supplier_quotes.create",
+            "Create supplier quote request",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "supplier_quotes.respond",
+            "Register supplier quote response",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "supplier_quotes.reject",
+            "Reject supplier quote",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Supplier Evaluations
+        // =========================
+        new ScopeDefinition(
+            "supplier_evaluations.read",
+            "View supplier evaluations",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "supplier_evaluations.create",
+            "Create supplier evaluation",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Purchases - Purchase Requests
+        // =========================
+        new ScopeDefinition(
+            "purchase_requests.read",
+            "View purchase requests",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "purchase_requests.create",
+            "Create purchase requests",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Purchases - Purchase Orders
+        // =========================
+        new ScopeDefinition(
+            "purchase_orders.read",
+            "View purchase orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "purchase_orders.create",
+            "Create purchase orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Purchases - Purchase Receipts
+        // =========================
+        new ScopeDefinition(
+            "purchase_receipts.read",
+            "View purchase receipts",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "purchase_receipts.create",
+            "Create purchase receipts",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "purchase_receipts.reject",
+            "Reject purchase receipts",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

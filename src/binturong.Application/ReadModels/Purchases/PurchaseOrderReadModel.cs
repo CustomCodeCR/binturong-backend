@@ -1,19 +1,24 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Application.ReadModels.Purchases;
 
+[BsonIgnoreExtraElements]
 public sealed class PurchaseOrderReadModel
 {
+    // ✅ Treat MongoDB _id as string (your logical id)
+    [BsonId]
     public string Id { get; init; } = default!; // "purchase_order:{PurchaseOrderId}"
-    public int PurchaseOrderId { get; init; }
 
+    public Guid PurchaseOrderId { get; init; }
     public string Code { get; init; } = default!;
 
-    public int SupplierId { get; init; }
+    public Guid SupplierId { get; init; }
     public string SupplierName { get; init; } = default!;
 
-    public int? BranchId { get; init; }
+    public Guid? BranchId { get; init; }
     public string? BranchName { get; init; }
 
-    public int? RequestId { get; init; }
+    public Guid? RequestId { get; init; }
 
     public DateTime OrderDate { get; init; }
     public string Status { get; init; } = default!;
@@ -31,9 +36,9 @@ public sealed class PurchaseOrderReadModel
 
 public sealed class PurchaseOrderLineReadModel
 {
-    public int PurchaseOrderDetailId { get; init; }
+    public Guid PurchaseOrderDetailId { get; init; }
 
-    public int ProductId { get; init; }
+    public Guid ProductId { get; init; }
     public string ProductName { get; init; } = default!;
 
     public decimal Quantity { get; init; }

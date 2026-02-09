@@ -17,4 +17,51 @@ public sealed class AccountPayable : Entity
 
     public Domain.Suppliers.Supplier? Supplier { get; set; }
     public Domain.PurchaseOrders.PurchaseOrder? PurchaseOrder { get; set; }
+
+    public void RaiseCreated() =>
+        Raise(
+            new AccountPayableCreatedDomainEvent(
+                Id,
+                SupplierId,
+                PurchaseOrderId,
+                SupplierInvoiceId,
+                DocumentDate,
+                DueDate,
+                TotalAmount,
+                PendingBalance,
+                Currency,
+                Status
+            )
+        );
+
+    public Result RegisterPayment(decimal amount, DateTime paidAtUtc, string? notes)
+    {
+        if (amount <= 0)
+            return Result.Failure(AccountPayableErrors.PaymentAmountInvalid);
+
+        if (PendingBalance <= 0)
+            return Result.Failure(AccountPayableErrors.AlreadySettled);
+
+        if (amount > PendingBalance)
+            return Result.Failure(AccountPayableErrors.PaymentExceedsBalance);
+
+        var before = PendingBalance;
+        PendingBalance -= amount;
+
+        Status = PendingBalance == 0 ? "Paid" : "Pending";
+
+        Raise(
+            new AccountPayablePaymentRegisteredDomainEvent(
+                Id,
+                amount,
+                before,
+                PendingBalance,
+                Status,
+                paidAtUtc,
+                string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()
+            )
+        );
+
+        return Result.Success();
+    }
 }

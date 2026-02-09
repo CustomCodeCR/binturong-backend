@@ -3264,6 +3264,123 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.ToTable("SupplierContacts", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.SupplierEvaluations.SupplierEvaluation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("classification");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("EvaluatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("evaluated_at_utc");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_evaluations");
+
+                    b.ToTable("supplier_evaluations", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.SupplierQuotes.SupplierQuote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("RejectReason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reject_reason");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at_utc");
+
+                    b.Property<DateTime?>("RespondedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("responded_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_id");
+
+                    b.Property<string>("SupplierMessage")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("supplier_message");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_quotes");
+
+                    b.ToTable("supplier_quotes", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.SupplierQuotes.SupplierQuoteLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("SupplierQuoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_quote_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_supplier_quote_line");
+
+                    b.HasIndex("SupplierQuoteId")
+                        .HasDatabaseName("ix_supplier_quote_line_supplier_quote_id");
+
+                    b.ToTable("supplier_quote_line", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Suppliers.Supplier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4636,6 +4753,18 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("Domain.SupplierQuotes.SupplierQuoteLine", b =>
+                {
+                    b.HasOne("Domain.SupplierQuotes.SupplierQuote", "SupplierQuote")
+                        .WithMany("Lines")
+                        .HasForeignKey("SupplierQuoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_supplier_quote_line_supplier_quotes_supplier_quote_id");
+
+                    b.Navigation("SupplierQuote");
+                });
+
             modelBuilder.Entity("Domain.UserRoles.UserRole", b =>
                 {
                     b.HasOne("Domain.Roles.Role", "Role")
@@ -4962,6 +5091,11 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
             modelBuilder.Entity("Domain.ShoppingCarts.ShoppingCart", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Domain.SupplierQuotes.SupplierQuote", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Domain.Suppliers.Supplier", b =>

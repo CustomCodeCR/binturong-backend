@@ -17,4 +17,39 @@ public sealed class PurchaseRequest : Entity
 
     public ICollection<Domain.PurchaseOrders.PurchaseOrder> PurchaseOrders { get; set; } =
         new List<Domain.PurchaseOrders.PurchaseOrder>();
+
+    // =========================
+    // Domain events
+    // =========================
+    public void RaiseCreated() =>
+        Raise(
+            new PurchaseRequestCreatedDomainEvent(
+                Id,
+                Code,
+                BranchId,
+                RequestedById,
+                RequestDate,
+                Status,
+                string.IsNullOrWhiteSpace(Notes) ? null : Notes
+            )
+        );
+
+    // =========================
+    // Domain behavior (optional helper)
+    // =========================
+    public Result MarkCreated()
+    {
+        var code = Code?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code))
+            return Result.Failure(PurchaseRequestErrors.CodeRequired);
+
+        if (RequestDate == default)
+            return Result.Failure(PurchaseRequestErrors.RequestDateRequired);
+
+        if (string.IsNullOrWhiteSpace(Status))
+            Status = "Pending";
+
+        RaiseCreated();
+        return Result.Success();
+    }
 }

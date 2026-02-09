@@ -1,3 +1,4 @@
+using Domain.PurchaseReceiptDetails;
 using SharedKernel;
 
 namespace Domain.PurchaseReceipts;
@@ -14,6 +15,45 @@ public sealed class PurchaseReceipt : Entity
     public Domain.PurchaseOrders.PurchaseOrder? PurchaseOrder { get; set; }
     public Domain.Warehouses.Warehouse? Warehouse { get; set; }
 
-    public ICollection<Domain.PurchaseReceiptDetails.PurchaseReceiptDetail> Details { get; set; } =
-        new List<Domain.PurchaseReceiptDetails.PurchaseReceiptDetail>();
+    public ICollection<PurchaseReceiptDetail> Details { get; set; } =
+        new List<PurchaseReceiptDetail>();
+
+    // =========================
+    // Domain events
+    // =========================
+
+    public void RaiseRegistered() =>
+        Raise(
+            new PurchaseReceiptRegisteredDomainEvent(
+                Id,
+                PurchaseOrderId,
+                WarehouseId,
+                ReceiptDate,
+                Status,
+                string.IsNullOrWhiteSpace(Notes) ? null : Notes
+            )
+        );
+
+    public void AddDetail(PurchaseReceiptDetail d)
+    {
+        Details.Add(d);
+
+        Raise(
+            new PurchaseReceiptDetailAddedDomainEvent(
+                Id,
+                d.Id,
+                d.ProductId,
+                d.QuantityReceived,
+                d.UnitCost
+            )
+        );
+    }
+
+    public void Reject(string reason)
+    {
+        Status = "Rejected";
+        Notes = reason;
+
+        Raise(new PurchaseReceiptRejectedDomainEvent(Id, PurchaseOrderId, reason, DateTime.UtcNow));
+    }
 }

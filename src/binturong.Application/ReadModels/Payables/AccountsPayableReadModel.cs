@@ -3,12 +3,12 @@ namespace Application.ReadModels.Payables;
 public sealed class AccountsPayableReadModel
 {
     public string Id { get; init; } = default!; // "ap:{AccountPayableId}"
-    public int AccountPayableId { get; init; }
+    public Guid AccountPayableId { get; init; }
 
-    public int SupplierId { get; init; }
+    public Guid SupplierId { get; init; }
     public string SupplierName { get; init; } = default!;
 
-    public int? PurchaseOrderId { get; init; }
+    public Guid? PurchaseOrderId { get; init; }
     public string? SupplierInvoiceId { get; init; }
 
     public DateTime DocumentDate { get; init; }

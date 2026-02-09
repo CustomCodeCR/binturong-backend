@@ -20,4 +20,19 @@ public static class PurchaseRequestErrors
         "PurchaseRequests.CodeNotUnique",
         "The provided purchase request code is not unique"
     );
+
+    public static readonly Error CodeRequired = Error.Validation(
+        "PurchaseRequests.CodeRequired",
+        "Code is required"
+    );
+
+    public static readonly Error RequestDateRequired = Error.Validation(
+        "PurchaseRequests.RequestDateRequired",
+        "RequestDate is required"
+    );
+
+    public static readonly Error InvalidStatus = Error.Validation(
+        "PurchaseRequests.InvalidStatus",
+        "Invalid purchase request status"
+    );
 }

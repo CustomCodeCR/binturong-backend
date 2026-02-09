@@ -152,6 +152,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         Set<Domain.SupplierContacts.SupplierContact>();
     public DbSet<Domain.SupplierAttachments.SupplierAttachment> SupplierAttachments =>
         Set<Domain.SupplierAttachments.SupplierAttachment>();
+    public DbSet<Domain.SupplierQuotes.SupplierQuote> SupplierQuotes =>
+        Set<Domain.SupplierQuotes.SupplierQuote>();
+    public DbSet<Domain.SupplierEvaluations.SupplierEvaluation> SupplierEvaluations =>
+        Set<Domain.SupplierEvaluations.SupplierEvaluation>();
 
     public DbSet<Domain.Employees.Employee> Employees => Set<Domain.Employees.Employee>();
     public DbSet<Domain.EmployeeHistory.EmployeeHistoryEntry> EmployeeHistory =>

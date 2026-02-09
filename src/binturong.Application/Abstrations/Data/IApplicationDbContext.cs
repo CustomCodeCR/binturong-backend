@@ -53,6 +53,8 @@ using Domain.Services;
 using Domain.ShoppingCarts;
 using Domain.SupplierAttachments;
 using Domain.SupplierContacts;
+using Domain.SupplierEvaluations;
+using Domain.SupplierQuotes;
 using Domain.Suppliers;
 using Domain.Taxes;
 using Domain.UnitsOfMeasure;
@@ -93,6 +95,8 @@ public interface IApplicationDbContext
     DbSet<Supplier> Suppliers { get; }
     DbSet<SupplierContact> SupplierContacts { get; }
     DbSet<SupplierAttachment> SupplierAttachments { get; }
+    DbSet<SupplierQuote> SupplierQuotes { get; }
+    DbSet<SupplierEvaluation> SupplierEvaluations { get; }
 
     // Employees
     DbSet<Employee> Employees { get; }

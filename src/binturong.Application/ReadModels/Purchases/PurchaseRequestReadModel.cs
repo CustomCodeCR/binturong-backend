@@ -2,17 +2,17 @@ namespace Application.ReadModels.Purchases;
 
 public sealed class PurchaseRequestReadModel
 {
-    public string Id { get; init; } = default!; // "purchase_request:{RequestId}"
-    public int RequestId { get; init; }
+    public string Id { get; set; } = default!; // "purchase_request:{RequestId}"
+    public Guid RequestId { get; set; }
 
-    public string Code { get; init; } = default!;
-    public int? BranchId { get; init; }
-    public string? BranchName { get; init; }
+    public string Code { get; set; } = default!;
+    public Guid? BranchId { get; set; }
+    public string? BranchName { get; set; }
 
-    public int RequestedById { get; init; }
-    public string RequestedByName { get; init; } = default!;
+    public Guid? RequestedById { get; set; }
+    public string RequestedByName { get; set; } = string.Empty;
 
-    public DateTime RequestDate { get; init; }
-    public string Status { get; init; } = default!;
-    public string? Notes { get; init; }
+    public DateTime RequestDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Notes { get; set; }
 }

@@ -2,29 +2,29 @@ namespace Application.ReadModels.Purchases;
 
 public sealed class PurchaseReceiptReadModel
 {
-    public string Id { get; init; } = default!; // "purchase_receipt:{ReceiptId}"
-    public int ReceiptId { get; init; }
+    public string Id { get; set; } = default!; // "purchase_receipt:{ReceiptId}"
+    public Guid ReceiptId { get; set; }
 
-    public int PurchaseOrderId { get; init; }
-    public string PurchaseOrderCode { get; init; } = default!;
+    public Guid PurchaseOrderId { get; set; }
+    public string PurchaseOrderCode { get; set; } = string.Empty;
 
-    public int WarehouseId { get; init; }
-    public string WarehouseName { get; init; } = default!;
+    public Guid WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = string.Empty;
 
-    public DateTime ReceiptDate { get; init; }
-    public string Status { get; init; } = default!;
-    public string? Notes { get; init; }
+    public DateTime ReceiptDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Notes { get; set; }
 
-    public IReadOnlyList<PurchaseReceiptLineReadModel> Lines { get; init; } = [];
+    public List<PurchaseReceiptLineReadModel> Lines { get; set; } = new();
 }
 
 public sealed class PurchaseReceiptLineReadModel
 {
-    public int ReceiptDetailId { get; init; }
+    public Guid ReceiptDetailId { get; set; }
 
-    public int ProductId { get; init; }
-    public string ProductName { get; init; } = default!;
+    public Guid ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
 
-    public decimal QuantityReceived { get; init; }
-    public decimal UnitCost { get; init; }
+    public decimal QuantityReceived { get; set; }
+    public decimal UnitCost { get; set; }
 }
