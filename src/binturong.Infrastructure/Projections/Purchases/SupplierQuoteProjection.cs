@@ -49,7 +49,13 @@ internal sealed class SupplierQuoteProjection
             ResponseLines = new List<SupplierQuoteResponseLineReadModel>(),
         };
 
-        await col.InsertOneAsync(doc, new InsertOneOptions(), ct);
+        // Idempotent: Replace + upsert avoids duplicate key issues
+        await col.ReplaceOneAsync(
+            x => x.SupplierQuoteId == e.SupplierQuoteId,
+            doc,
+            new ReplaceOptions { IsUpsert = true },
+            ct
+        );
     }
 
     public async Task ProjectAsync(SupplierQuoteLineAddedDomainEvent e, CancellationToken ct)
@@ -66,29 +72,45 @@ internal sealed class SupplierQuoteProjection
             Quantity = e.Quantity,
         };
 
-        var update = Builders<SupplierQuoteReadModel>.Update.Push(x => x.Lines, line);
-
-        await col.UpdateOneAsync(
-            x => x.SupplierQuoteId == e.SupplierQuoteId,
-            update,
-            cancellationToken: ct
+        // IMPORTANT:
+        // Filter by Id (string) which is the natural Mongo document key in your model.
+        var filter = Builders<SupplierQuoteReadModel>.Filter.Eq(
+            x => x.Id,
+            $"supplier_quote:{e.SupplierQuoteId}"
         );
+
+        // IMPORTANT:
+        // Upsert so even if events are out-of-order, the doc gets created and the line is pushed.
+        var update = Builders<SupplierQuoteReadModel>
+            .Update.SetOnInsert(x => x.Id, $"supplier_quote:{e.SupplierQuoteId}")
+            .SetOnInsert(x => x.SupplierQuoteId, e.SupplierQuoteId)
+            .SetOnInsert(x => x.Code, string.Empty)
+            .SetOnInsert(x => x.SupplierId, Guid.Empty)
+            .SetOnInsert(x => x.SupplierName, string.Empty)
+            .SetOnInsert(x => x.Status, "Sent")
+            .SetOnInsert(x => x.RequestedAtUtc, DateTime.UnixEpoch)
+            .Push(x => x.Lines, line);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     public async Task ProjectAsync(SupplierQuoteRespondedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<SupplierQuoteReadModel>(QuotesCol);
 
+        var filter = Builders<SupplierQuoteReadModel>.Filter.Eq(
+            x => x.Id,
+            $"supplier_quote:{e.SupplierQuoteId}"
+        );
+
         var update = Builders<SupplierQuoteReadModel>
-            .Update.Set(x => x.Status, e.Status)
+            .Update.SetOnInsert(x => x.Id, $"supplier_quote:{e.SupplierQuoteId}")
+            .SetOnInsert(x => x.SupplierQuoteId, e.SupplierQuoteId)
+            .Set(x => x.Status, e.Status)
             .Set(x => x.RespondedAtUtc, e.RespondedAtUtc)
             .Set(x => x.SupplierMessage, e.SupplierMessage);
 
-        await col.UpdateOneAsync(
-            x => x.SupplierQuoteId == e.SupplierQuoteId,
-            update,
-            cancellationToken: ct
-        );
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     public async Task ProjectAsync(
@@ -110,32 +132,35 @@ internal sealed class SupplierQuoteProjection
             Conditions = e.Conditions,
         };
 
-        // push each response line event
-        var update = Builders<SupplierQuoteReadModel>.Update.Push(
-            x => x.ResponseLines,
-            responseLine
+        var filter = Builders<SupplierQuoteReadModel>.Filter.Eq(
+            x => x.Id,
+            $"supplier_quote:{e.SupplierQuoteId}"
         );
 
-        await col.UpdateOneAsync(
-            x => x.SupplierQuoteId == e.SupplierQuoteId,
-            update,
-            cancellationToken: ct
-        );
+        var update = Builders<SupplierQuoteReadModel>
+            .Update.SetOnInsert(x => x.Id, $"supplier_quote:{e.SupplierQuoteId}")
+            .SetOnInsert(x => x.SupplierQuoteId, e.SupplierQuoteId)
+            .Push(x => x.ResponseLines, responseLine);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     public async Task ProjectAsync(SupplierQuoteRejectedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<SupplierQuoteReadModel>(QuotesCol);
 
+        var filter = Builders<SupplierQuoteReadModel>.Filter.Eq(
+            x => x.Id,
+            $"supplier_quote:{e.SupplierQuoteId}"
+        );
+
         var update = Builders<SupplierQuoteReadModel>
-            .Update.Set(x => x.Status, e.Status)
+            .Update.SetOnInsert(x => x.Id, $"supplier_quote:{e.SupplierQuoteId}")
+            .SetOnInsert(x => x.SupplierQuoteId, e.SupplierQuoteId)
+            .Set(x => x.Status, e.Status)
             .Set(x => x.RejectReason, e.Reason);
 
-        await col.UpdateOneAsync(
-            x => x.SupplierQuoteId == e.SupplierQuoteId,
-            update,
-            cancellationToken: ct
-        );
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private async Task<string> ResolveSupplierName(Guid supplierId, CancellationToken ct)
@@ -144,6 +169,7 @@ internal sealed class SupplierQuoteProjection
         var s = await col.Find(x => x.SupplierId == supplierId).FirstOrDefaultAsync(ct);
         if (s is null)
             return string.Empty;
+
         return !string.IsNullOrWhiteSpace(s.TradeName) ? s.TradeName : s.LegalName;
     }
 
@@ -156,7 +182,6 @@ internal sealed class SupplierQuoteProjection
 
     private async Task<string> ResolveProductName(Guid productId, CancellationToken ct)
     {
-        // Adjust type if your ProductReadModel differs
         var col = _db.GetCollection<Application.ReadModels.Inventory.ProductReadModel>(ProductsCol);
         var p = await col.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
         return p?.Name ?? string.Empty;

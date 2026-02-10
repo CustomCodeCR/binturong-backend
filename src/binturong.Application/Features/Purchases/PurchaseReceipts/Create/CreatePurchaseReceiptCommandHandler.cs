@@ -37,50 +37,24 @@ internal sealed class CreatePurchaseReceiptCommandHandler
         var ua = _request.UserAgent;
         var userId = _currentUser.UserId;
 
-        // Basic validations
         if (cmd.PurchaseOrderId == Guid.Empty)
-            return Result.Failure<Guid>(
-                Error.Validation(
-                    "PurchaseReceipts.PurchaseOrderRequired",
-                    "PurchaseOrderId is required"
-                )
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.PurchaseOrderRequired);
 
         if (cmd.WarehouseId == Guid.Empty)
-            return Result.Failure<Guid>(
-                Error.Validation("PurchaseReceipts.WarehouseRequired", "WarehouseId is required")
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.WarehouseRequired);
 
         if (cmd.Lines is null || cmd.Lines.Count == 0)
-            return Result.Failure<Guid>(
-                Error.Validation("PurchaseReceipts.NoLines", "At least one line is required")
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.NoLines);
 
         if (cmd.Lines.Any(l => l.ProductId == Guid.Empty))
-            return Result.Failure<Guid>(
-                Error.Validation(
-                    "PurchaseReceipts.ProductRequired",
-                    "All lines must have ProductId"
-                )
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.ProductRequired);
 
         if (cmd.Lines.Any(l => l.QuantityReceived <= 0))
-            return Result.Failure<Guid>(
-                Error.Validation(
-                    "PurchaseReceipts.QuantityInvalid",
-                    "All lines must have QuantityReceived > 0"
-                )
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.QuantityInvalid);
 
         if (cmd.Lines.Any(l => l.UnitCost <= 0))
-            return Result.Failure<Guid>(
-                Error.Validation(
-                    "PurchaseReceipts.UnitCostInvalid",
-                    "All lines must have UnitCost > 0"
-                )
-            );
+            return Result.Failure<Guid>(PurchaseReceiptErrors.UnitCostInvalid);
 
-        // Load PurchaseOrder + details
         var po = await _db
             .PurchaseOrders.Include(x => x.Details)
             .FirstOrDefaultAsync(x => x.Id == cmd.PurchaseOrderId, ct);
@@ -93,14 +67,12 @@ internal sealed class CreatePurchaseReceiptCommandHandler
                 )
             );
 
-        // Warehouse exists (optional but recommended)
         var whExists = await _db.Warehouses.AnyAsync(x => x.Id == cmd.WarehouseId, ct);
         if (!whExists)
             return Result.Failure<Guid>(
                 Error.NotFound("Warehouses.NotFound", $"Warehouse '{cmd.WarehouseId}' not found")
             );
 
-        // Validate that products exist in PO and quantities don't exceed ordered (for this receipt)
         var orderedByProduct = po
             .Details.GroupBy(d => d.ProductId)
             .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
@@ -109,24 +81,19 @@ internal sealed class CreatePurchaseReceiptCommandHandler
         {
             if (!orderedByProduct.TryGetValue(l.ProductId, out var orderedQty))
                 return Result.Failure<Guid>(
-                    Error.Validation(
-                        "PurchaseReceipts.ProductNotInOrder",
-                        $"Product '{l.ProductId}' is not part of purchase order '{po.Id}'"
-                    )
+                    PurchaseReceiptErrors.ProductNotInOrder(l.ProductId, po.Id)
                 );
 
             if (l.QuantityReceived > orderedQty)
                 return Result.Failure<Guid>(
-                    Error.Validation(
-                        "PurchaseReceipts.QuantityExceedsOrdered",
-                        $"Received qty for product '{l.ProductId}' exceeds ordered qty ({l.QuantityReceived} > {orderedQty})"
+                    PurchaseReceiptErrors.QuantityExceedsOrdered(
+                        l.ProductId,
+                        l.QuantityReceived,
+                        orderedQty
                     )
                 );
         }
 
-        // Decide receipt status (HU-COM-02)
-        // - If any line received less than ordered => PartiallyReceived
-        // - Else => Completed
         var isPartial = cmd.Lines.Any(l => l.QuantityReceived < orderedByProduct[l.ProductId]);
         var receiptStatus = isPartial ? "PartiallyReceived" : "Completed";
 
@@ -140,24 +107,28 @@ internal sealed class CreatePurchaseReceiptCommandHandler
             Notes = cmd.Notes?.Trim() ?? string.Empty,
         };
 
+        receipt.RaiseCreated();
+
         foreach (var l in cmd.Lines)
         {
-            receipt.Details.Add(
-                new PurchaseReceiptDetail
-                {
-                    Id = Guid.NewGuid(),
-                    ReceiptId = receipt.Id,
-                    ProductId = l.ProductId,
-                    QuantityReceived = l.QuantityReceived,
-                    UnitCost = l.UnitCost,
-                }
-            );
+            var detail = new PurchaseReceiptDetail
+            {
+                Id = Guid.NewGuid(),
+                ReceiptId = receipt.Id,
+                ProductId = l.ProductId,
+                QuantityReceived = l.QuantityReceived,
+                UnitCost = l.UnitCost,
+            };
+
+            receipt.AddDetail(detail);
         }
 
         _db.PurchaseReceipts.Add(receipt);
 
-        // Update PurchaseOrder status too (HU-COM-02 scenario 1/2)
-        po.Status = isPartial ? "PartiallyReceived" : "Completed";
+        if (isPartial)
+            po.MarkPartiallyReceived();
+        else
+            po.MarkCompleted();
 
         await _db.SaveChangesAsync(ct);
 

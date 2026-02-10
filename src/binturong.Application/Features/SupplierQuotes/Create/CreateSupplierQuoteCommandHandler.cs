@@ -66,14 +66,17 @@ internal sealed class CreateSupplierQuoteCommandHandler
             Notes = cmd.Notes?.Trim() ?? string.Empty,
         };
 
+        // IMPORTANT:
+        // Fire the event that creates the Mongo document FIRST
+        // so subsequent LineAdded events can push into an existing doc.
+        quote.RaiseSent();
+
         foreach (var l in cmd.Lines)
         {
             var r = quote.AddLine(l.ProductId, l.Quantity);
             if (r.IsFailure)
                 return Result.Failure<Guid>(r.Error);
         }
-
-        quote.RaiseSent();
 
         _db.SupplierQuotes.Add(quote);
         await _db.SaveChangesAsync(ct);

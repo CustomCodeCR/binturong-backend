@@ -1,6 +1,8 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
 using Application.Features.SupplierQuotes.Create;
+using Application.Features.SupplierQuotes.GetSupplierQuoteById;
+using Application.Features.SupplierQuotes.GetSupplierQuotes;
 using Application.Features.SupplierQuotes.Reject;
 using Application.Features.SupplierQuotes.Respond;
 using Application.Security.Scopes;
@@ -12,6 +14,62 @@ public sealed class SupplierQuotesEndpoints : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/suppliers/quotes").WithTags("Suppliers - Quotes");
+
+        group
+            .MapGet(
+                "/",
+                async (
+                    string? search,
+                    Guid? supplierId,
+                    Guid? branchId,
+                    string? status,
+                    int? skip,
+                    int? take,
+                    IQueryHandler<
+                        GetSupplierQuotesQuery,
+                        IReadOnlyList<Application.ReadModels.Purchases.SupplierQuoteReadModel>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new GetSupplierQuotesQuery(
+                            search,
+                            supplierId,
+                            branchId,
+                            status,
+                            skip ?? 0,
+                            take ?? 50
+                        ),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SupplierQuotesRead);
+
+        group
+            .MapGet(
+                "/{id:guid}",
+                async (
+                    Guid id,
+                    IQueryHandler<
+                        GetSupplierQuoteByIdQuery,
+                        Application.ReadModels.Purchases.SupplierQuoteReadModel
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetSupplierQuoteByIdQuery(id), ct);
+                    return result.IsFailure
+                        ? Results.NotFound(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SupplierQuotesRead);
 
         group
             .MapPost(

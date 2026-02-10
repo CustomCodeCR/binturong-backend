@@ -49,6 +49,7 @@ internal sealed class RejectPurchaseReceiptCommandHandler
             x => x.Id == cmd.ReceiptId,
             ct
         );
+
         if (receipt is null)
             return Result.Failure(
                 Error.NotFound(
@@ -57,13 +58,7 @@ internal sealed class RejectPurchaseReceiptCommandHandler
                 )
             );
 
-        // HU-COM-02 scenario 3: do NOT update inventory here (that should be handled by your inventory flow)
-        receipt.Status = "Rejected";
-
-        var reason = cmd.Reason.Trim();
-        receipt.Notes = string.IsNullOrWhiteSpace(receipt.Notes)
-            ? $"Rejected: {reason}"
-            : $"{receipt.Notes}\nRejected: {reason}";
+        receipt.Reject(cmd.Reason, cmd.RejectedAtUtc);
 
         await _db.SaveChangesAsync(ct);
 
@@ -74,7 +69,7 @@ internal sealed class RejectPurchaseReceiptCommandHandler
             receipt.Id,
             "PURCHASE_RECEIPT_REJECTED",
             string.Empty,
-            $"receiptId={receipt.Id}; rejectedAt={cmd.RejectedAtUtc:o}; reason={reason}; status={receipt.Status}",
+            $"receiptId={receipt.Id}; rejectedAt={cmd.RejectedAtUtc:o}; reason={cmd.Reason.Trim()}; status={receipt.Status}",
             ip,
             ua,
             ct

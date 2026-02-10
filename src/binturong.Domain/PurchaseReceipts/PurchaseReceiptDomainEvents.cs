@@ -2,16 +2,15 @@ using SharedKernel;
 
 namespace Domain.PurchaseReceipts;
 
-public sealed record PurchaseReceiptRegisteredDomainEvent(
+public sealed record PurchaseReceiptRejectedDomainEvent(
     Guid ReceiptId,
     Guid PurchaseOrderId,
-    Guid WarehouseId,
-    DateTime ReceiptDate,
-    string Status,
-    string? Notes
+    DateTime RejectedAtUtc,
+    string Reason,
+    string Status
 ) : IDomainEvent;
 
-public sealed record PurchaseReceiptDetailAddedDomainEvent(
+public sealed record PurchaseReceiptLineAddedDomainEvent(
     Guid ReceiptId,
     Guid ReceiptDetailId,
     Guid ProductId,
@@ -19,9 +18,11 @@ public sealed record PurchaseReceiptDetailAddedDomainEvent(
     decimal UnitCost
 ) : IDomainEvent;
 
-public sealed record PurchaseReceiptRejectedDomainEvent(
+public sealed record PurchaseReceiptCreatedDomainEvent(
     Guid ReceiptId,
     Guid PurchaseOrderId,
-    string Reason,
-    DateTime RejectedAtUtc
+    Guid WarehouseId,
+    DateTime ReceiptDateUtc,
+    string Status,
+    string? Notes
 ) : IDomainEvent;

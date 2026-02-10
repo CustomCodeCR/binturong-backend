@@ -22,9 +22,9 @@ public sealed class PurchaseReceipt : Entity
     // Domain events
     // =========================
 
-    public void RaiseRegistered() =>
+    public void RaiseCreated() =>
         Raise(
-            new PurchaseReceiptRegisteredDomainEvent(
+            new PurchaseReceiptCreatedDomainEvent(
                 Id,
                 PurchaseOrderId,
                 WarehouseId,
@@ -39,7 +39,7 @@ public sealed class PurchaseReceipt : Entity
         Details.Add(d);
 
         Raise(
-            new PurchaseReceiptDetailAddedDomainEvent(
+            new PurchaseReceiptLineAddedDomainEvent(
                 Id,
                 d.Id,
                 d.ProductId,
@@ -49,11 +49,15 @@ public sealed class PurchaseReceipt : Entity
         );
     }
 
-    public void Reject(string reason)
+    public void Reject(string reason, DateTime rejectedAtUtc)
     {
         Status = "Rejected";
-        Notes = reason;
 
-        Raise(new PurchaseReceiptRejectedDomainEvent(Id, PurchaseOrderId, reason, DateTime.UtcNow));
+        var r = reason.Trim();
+        Notes = string.IsNullOrWhiteSpace(Notes) ? $"Rejected: {r}" : $"{Notes}\nRejected: {r}";
+
+        Raise(
+            new PurchaseReceiptRejectedDomainEvent(Id, PurchaseOrderId, rejectedAtUtc, r, Status)
+        );
     }
 }

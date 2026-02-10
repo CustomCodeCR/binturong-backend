@@ -1,30 +1,39 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Application.ReadModels.Purchases;
 
+[BsonIgnoreExtraElements]
 public sealed class PurchaseReceiptReadModel
 {
-    public string Id { get; set; } = default!; // "purchase_receipt:{ReceiptId}"
-    public Guid ReceiptId { get; set; }
+    // ✅ Maps to Mongo "_id" as STRING (not ObjectId)
+    [BsonId]
+    [BsonRepresentation(BsonType.String)]
+    public string Id { get; init; } = default!; // "purchase_receipt:{ReceiptId}"
 
-    public Guid PurchaseOrderId { get; set; }
-    public string PurchaseOrderCode { get; set; } = string.Empty;
+    public Guid ReceiptId { get; init; }
 
-    public Guid WarehouseId { get; set; }
-    public string WarehouseName { get; set; } = string.Empty;
+    public Guid PurchaseOrderId { get; init; }
+    public string PurchaseOrderCode { get; init; } = default!;
 
-    public DateTime ReceiptDate { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public string? Notes { get; set; }
+    public Guid WarehouseId { get; init; }
+    public string WarehouseName { get; init; } = default!;
 
-    public List<PurchaseReceiptLineReadModel> Lines { get; set; } = new();
+    public DateTime ReceiptDate { get; init; }
+    public string Status { get; init; } = default!;
+    public string? Notes { get; init; }
+
+    public IReadOnlyList<PurchaseReceiptLineReadModel> Lines { get; init; } =
+        new List<PurchaseReceiptLineReadModel>();
 }
 
 public sealed class PurchaseReceiptLineReadModel
 {
-    public Guid ReceiptDetailId { get; set; }
+    public Guid ReceiptDetailId { get; init; }
 
-    public Guid ProductId { get; set; }
-    public string ProductName { get; set; } = string.Empty;
+    public Guid ProductId { get; init; }
+    public string ProductName { get; init; } = default!;
 
-    public decimal QuantityReceived { get; set; }
-    public decimal UnitCost { get; set; }
+    public decimal QuantityReceived { get; init; }
+    public decimal UnitCost { get; init; }
 }
