@@ -29,21 +29,27 @@ public sealed class RoleSeeder
         var roleByName = roles.ToDictionary(x => x.Name);
         var scopeByCode = scopes.ToDictionary(x => x.Code);
 
+        // Load all existing pairs once (DB)
+        var existingPairs = await _db
+            .RoleScopes.AsNoTracking()
+            .Select(x => new { x.RoleId, x.ScopeId })
+            .ToListAsync(ct);
+
+        // Track pairs already in DB + pairs we add in this run
+        var assigned = existingPairs.Select(x => (x.RoleId, x.ScopeId)).ToHashSet();
+
         foreach (var def in ScopeRegistry.All)
         {
-            foreach (var roleName in def.DefaultRoles)
+            if (!scopeByCode.TryGetValue(def.Code, out var scope))
+                continue;
+
+            foreach (var roleName in def.DefaultRoles.Distinct())
             {
                 if (!roleByName.TryGetValue(roleName, out var role))
                     continue;
 
-                var scope = scopeByCode[def.Code];
-
-                var exists = await _db.RoleScopes.AnyAsync(
-                    x => x.RoleId == role.Id && x.ScopeId == scope.Id,
-                    ct
-                );
-
-                if (exists)
+                var key = (role.Id, scope.Id);
+                if (assigned.Contains(key))
                     continue;
 
                 var rs = new RoleScope
@@ -54,31 +60,42 @@ public sealed class RoleSeeder
                 };
 
                 rs.RaiseAssigned(scope.Code);
+
                 _db.RoleScopes.Add(rs);
+                assigned.Add(key); // critical: prevents duplicates in same run
             }
         }
 
-        // SuperAdmin gets everything
-        await AssignAllScopesToRoleAsync(ScopeRegistry.Roles.SuperAdmin, ct);
+        // SuperAdmin gets everything (safe with the same HashSet)
+        await AssignAllScopesToRoleAsync(
+            ScopeRegistry.Roles.SuperAdmin,
+            scopes,
+            roleByName,
+            assigned,
+            ct
+        );
 
         await _db.SaveChangesAsync(ct);
     }
 
-    private async Task AssignAllScopesToRoleAsync(string roleName, CancellationToken ct)
+    private async Task AssignAllScopesToRoleAsync(
+        string roleName,
+        List<Domain.Scopes.Scope> allScopes,
+        Dictionary<string, Role> roleByName,
+        HashSet<(Guid RoleId, Guid ScopeId)> assigned,
+        CancellationToken ct
+    )
     {
-        var role = await _db.Roles.FirstAsync(x => x.Name == roleName, ct);
-        var scopes = await _db.Scopes.AsNoTracking().ToListAsync(ct);
-
-        var existing = await _db
-            .RoleScopes.Where(x => x.RoleId == role.Id)
-            .Select(x => x.ScopeId)
-            .ToListAsync(ct);
-
-        var set = existing.ToHashSet();
-
-        foreach (var s in scopes)
+        if (!roleByName.TryGetValue(roleName, out var role))
         {
-            if (set.Contains(s.Id))
+            // Fallback: in case roleByName doesn't include it for some reason
+            role = await _db.Roles.AsNoTracking().FirstAsync(x => x.Name == roleName, ct);
+        }
+
+        foreach (var s in allScopes)
+        {
+            var key = (role.Id, s.Id);
+            if (assigned.Contains(key))
                 continue;
 
             _db.RoleScopes.Add(
@@ -89,6 +106,8 @@ public sealed class RoleSeeder
                     ScopeId = s.Id,
                 }
             );
+
+            assigned.Add(key); // critical
         }
     }
 
