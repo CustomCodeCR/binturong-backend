@@ -1,6 +1,7 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
+using Application.Abstractions.Storage;
 using Application.Abstractions.Web;
 using Application.Features.Common.Audit;
 using Domain.SupplierAttachments;
@@ -14,18 +15,21 @@ internal sealed class RemoveSupplierAttachmentCommandHandler
     : ICommandHandler<RemoveSupplierAttachmentCommand>
 {
     private readonly IApplicationDbContext _db;
+    private readonly IObjectStorage _storage;
     private readonly ICommandBus _bus;
     private readonly IRequestContext _request;
     private readonly ICurrentUser _currentUser;
 
     public RemoveSupplierAttachmentCommandHandler(
         IApplicationDbContext db,
+        IObjectStorage storage,
         ICommandBus bus,
         IRequestContext request,
         ICurrentUser currentUser
     )
     {
         _db = db;
+        _storage = storage;
         _bus = bus;
         _request = request;
         _currentUser = currentUser;
@@ -80,7 +84,10 @@ internal sealed class RemoveSupplierAttachmentCommandHandler
         }
 
         var before =
-            $"supplierId={attachment.SupplierId}; attachmentId={attachment.Id}; fileName={attachment.FileName}; documentType={attachment.DocumentType}";
+            $"supplierId={attachment.SupplierId}; attachmentId={attachment.Id}; fileName={attachment.FileName}; documentType={attachment.DocumentType}; key={attachment.FileS3Key}";
+
+        // Delete object from storage (S3/local/hybrid)
+        await _storage.DeleteAsync(attachment.FileS3Key, ct);
 
         attachment.RaiseDeleted();
 

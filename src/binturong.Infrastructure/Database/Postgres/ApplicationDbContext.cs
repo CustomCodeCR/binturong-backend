@@ -182,6 +182,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.Contracts.Contract> Contracts => Set<Domain.Contracts.Contract>();
     public DbSet<Domain.ContractBillingMilestones.ContractBillingMilestone> ContractBillingMilestones =>
         Set<Domain.ContractBillingMilestones.ContractBillingMilestone>();
+    public DbSet<Domain.Contracts.ContractAttachment> ContractAttachments =>
+        Set<Domain.Contracts.ContractAttachment>();
 
     public DbSet<Domain.Invoices.Invoice> Invoices => Set<Domain.Invoices.Invoice>();
     public DbSet<Domain.InvoiceDetails.InvoiceDetail> InvoiceDetails =>

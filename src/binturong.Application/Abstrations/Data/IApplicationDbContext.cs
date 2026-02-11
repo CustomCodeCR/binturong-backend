@@ -119,6 +119,7 @@ public interface IApplicationDbContext
     // Contracts
     DbSet<Contract> Contracts { get; }
     DbSet<ContractBillingMilestone> ContractBillingMilestones { get; }
+    DbSet<ContractAttachment> ContractAttachments { get; }
 
     // Invoicing
     DbSet<Invoice> Invoices { get; }

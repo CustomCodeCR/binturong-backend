@@ -14,6 +14,7 @@ using Infrastructure.Database.Postgres;
 using Infrastructure.Database.Postgres.Seed;
 using Infrastructure.Messaging;
 using Infrastructure.Security;
+using Infrastructure.Services;
 using Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +23,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using MongoDB.Bson;
+using MongoDB.Bson; // IMPORTANT for GuidRepresentation
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
@@ -42,6 +43,11 @@ public static class DependencyInjection
         services.AddMongo(configuration);
         services.AddOutboxAndProjections(configuration);
         services.AddHealthChecks(configuration);
+
+        // =========================
+        // Platform services
+        // =========================
+        services.AddPlatformServices(configuration);
 
         services.AddAuthenticationInternal(configuration);
         services.AddAuthorizationInternal();
@@ -140,7 +146,7 @@ public static class DependencyInjection
 
         var mongoDbName = configuration["Mongo:Database"] ?? "binturong_read";
 
-        // MongoDB.Driver 3.x: store Guid as UUID Standard
+        // MongoDB: store Guid as UUID Standard
         try
         {
             BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
@@ -254,7 +260,7 @@ public static class DependencyInjection
     }
 
     // =========================
-    // Authorization (Policies, if you use them)
+    // Authorization
     // =========================
     private static IServiceCollection AddAuthorizationInternal(this IServiceCollection services)
     {

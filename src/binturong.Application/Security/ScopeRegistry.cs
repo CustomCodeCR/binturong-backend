@@ -353,6 +353,37 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        // =========================
+        // Contracts
+        // =========================
+        new ScopeDefinition(
+            "contracts.read",
+            "View contracts",
+            Roles.Admin,
+            Roles.Manager,
+            Roles.Operator
+        ),
+        new ScopeDefinition("contracts.create", "Create contracts", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("contracts.update", "Update contracts", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("contracts.delete", "Delete contracts", Roles.Admin),
+        new ScopeDefinition(
+            "contracts.milestones.manage",
+            "Manage contract billing milestones",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "contracts.attachments.upload",
+            "Upload contract attachments",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "contracts.attachments.delete",
+            "Delete contract attachments",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles
