@@ -325,6 +325,34 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        // =========================
+        // Sales Orders (Sales)
+        // =========================
+        new ScopeDefinition(
+            "sales_orders.read",
+            "View sales orders",
+            Roles.Admin,
+            Roles.Manager,
+            Roles.Operator
+        ),
+        new ScopeDefinition(
+            "sales_orders.create",
+            "Create sales orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "sales_orders.convert_from_quote",
+            "Convert quote to sales order",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "sales_orders.confirm",
+            "Confirm sales order",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles
