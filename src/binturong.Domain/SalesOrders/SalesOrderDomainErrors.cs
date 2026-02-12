@@ -7,6 +7,7 @@ public sealed record SalesOrderCreatedDomainEvent(
     string Code,
     Guid ClientId,
     Guid? BranchId,
+    Guid? SellerUserId,
     DateTime OrderDateUtc,
     string Status,
     string Currency,
@@ -15,17 +16,24 @@ public sealed record SalesOrderCreatedDomainEvent(
     decimal Taxes,
     decimal Discounts,
     decimal Total,
-    Guid? QuoteId
+    Guid? QuoteId,
+    string? Notes,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc
 ) : IDomainEvent;
 
 public sealed record SalesOrderConfirmedDomainEvent(
     Guid SalesOrderId,
     Guid SellerUserId,
-    decimal Total
+    decimal Total,
+    DateTime UpdatedAtUtc
 ) : IDomainEvent;
 
-public sealed record SalesOrderConvertedFromQuoteDomainEvent(Guid SalesOrderId, Guid QuoteId)
-    : IDomainEvent;
+public sealed record SalesOrderConvertedFromQuoteDomainEvent(
+    Guid SalesOrderId,
+    Guid QuoteId,
+    DateTime UpdatedAtUtc
+) : IDomainEvent;
 
 public sealed record SalesOrderDetailAddedDomainEvent(
     Guid SalesOrderId,
@@ -35,5 +43,6 @@ public sealed record SalesOrderDetailAddedDomainEvent(
     decimal UnitPrice,
     decimal DiscountPerc,
     decimal TaxPerc,
-    decimal LineTotal
+    decimal LineTotal,
+    DateTime UpdatedAtUtc
 ) : IDomainEvent;

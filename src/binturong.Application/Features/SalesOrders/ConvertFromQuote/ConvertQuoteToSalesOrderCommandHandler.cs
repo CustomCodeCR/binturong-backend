@@ -84,7 +84,7 @@ internal sealed class ConvertQuoteToSalesOrderCommandHandler
             so.Details.Add(d);
 
             // Your SalesOrder events (keep as you designed)
-            so.RaiseDetailAdded(d);
+            so.RaiseDetailAdded(d, now);
 
             subtotal += lineBase;
             discounts += lineDiscount;
@@ -98,7 +98,7 @@ internal sealed class ConvertQuoteToSalesOrderCommandHandler
         so.Total = total;
 
         so.RaiseCreated();
-        so.RaiseConvertedFromQuote(quote.Id);
+        so.RaiseConvertedFromQuote(quote.Id, now);
 
         _db.SalesOrders.Add(so);
         await _db.SaveChangesAsync(ct);

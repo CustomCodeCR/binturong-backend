@@ -29,6 +29,7 @@ using Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,6 +80,11 @@ public static class DependencyInjection
 
         services.AddScoped<ICommandBus, CommandBus>();
 
+        services.Configure<PayrollOptions>(configuration.GetSection("Payroll"));
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayrollOptions>>().Value
+        );
+
         return services;
     }
 
@@ -108,6 +114,7 @@ public static class DependencyInjection
                         )
                 )
                 .UseSnakeCaseNamingConvention()
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
         );
 
         services.AddScoped<IApplicationDbContext>(sp =>

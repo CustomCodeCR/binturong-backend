@@ -28,6 +28,7 @@ using Domain.PaymentGatewayConfig;
 using Domain.PaymentMethods;
 using Domain.Payments;
 using Domain.PayrollDetails;
+using Domain.PayrollOvertimes;
 using Domain.Payrolls;
 using Domain.ProductCategories;
 using Domain.Products;
@@ -145,6 +146,7 @@ public interface IApplicationDbContext
     // Payroll
     DbSet<Payroll> Payrolls { get; }
     DbSet<PayrollDetail> PayrollDetails { get; }
+    DbSet<PayrollOvertimeEntry> PayrollOvertimeEntries { get; }
 
     // Services
     DbSet<Service> Services { get; }

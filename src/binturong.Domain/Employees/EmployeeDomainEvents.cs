@@ -6,6 +6,7 @@ public sealed record EmployeeCreatedDomainEvent(
     Guid EmployeeId,
     string FullName,
     string NationalId,
+    string Email,
     string JobTitle,
     decimal BaseSalary,
     Guid? BranchId,
@@ -16,6 +17,7 @@ public sealed record EmployeeCreatedDomainEvent(
 public sealed record EmployeeUpdatedDomainEvent(
     Guid EmployeeId,
     string FullName,
+    string Email,
     string JobTitle,
     decimal BaseSalary,
     Guid? BranchId,

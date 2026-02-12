@@ -13,6 +13,7 @@ public sealed record CreateSalesOrderLine(
 public sealed record CreateSalesOrderCommand(
     Guid ClientId,
     Guid? BranchId,
+    Guid? SellerUserId,
     string Currency,
     decimal ExchangeRate,
     string? Notes,

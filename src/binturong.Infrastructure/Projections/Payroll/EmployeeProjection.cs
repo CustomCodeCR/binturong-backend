@@ -25,12 +25,24 @@ internal sealed class EmployeeProjection
         {
             Id = $"employee:{e.EmployeeId}",
             EmployeeId = e.EmployeeId,
+            UserId = null,
             BranchId = e.BranchId,
+            BranchName = null,
             FullName = e.FullName,
+            Email = e.Email,
             NationalId = e.NationalId,
             JobTitle = e.JobTitle,
             BaseSalary = e.BaseSalary,
-            HireDate = e.HireDate.ToDateTime(TimeOnly.MinValue),
+            HireDate = new DateTime(
+                e.HireDate.Year,
+                e.HireDate.Month,
+                e.HireDate.Day,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc
+            ),
+            TerminationDate = null,
             IsActive = e.IsActive,
             History = [],
         };

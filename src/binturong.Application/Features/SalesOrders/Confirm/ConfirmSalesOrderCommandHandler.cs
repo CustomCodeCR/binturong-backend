@@ -27,7 +27,7 @@ internal sealed class ConfirmSalesOrderCommandHandler : ICommandHandler<ConfirmS
         so.Status = "Confirmed";
 
         var now = DateTime.UtcNow;
-        so.RaiseConfirmed(cmd.SellerUserId);
+        so.RaiseConfirmed(cmd.SellerUserId, now);
 
         await _db.SaveChangesAsync(ct);
         return Result.Success();

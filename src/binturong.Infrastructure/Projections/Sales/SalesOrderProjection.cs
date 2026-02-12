@@ -20,10 +20,10 @@ internal sealed class SalesOrderProjection
         UpsertHeaderAsync(e, ct);
 
     public Task ProjectAsync(SalesOrderConvertedFromQuoteDomainEvent e, CancellationToken ct) =>
-        SetQuoteAsync(e.SalesOrderId, e.QuoteId, ct);
+        SetQuoteAsync(e.SalesOrderId, e.QuoteId, e.UpdatedAtUtc, ct);
 
     public Task ProjectAsync(SalesOrderConfirmedDomainEvent e, CancellationToken ct) =>
-        SetStatusAsync(e.SalesOrderId, "Confirmed", ct);
+        SetConfirmedAsync(e.SalesOrderId, e.SellerUserId, "Confirmed", e.UpdatedAtUtc, ct);
 
     public Task ProjectAsync(SalesOrderDetailAddedDomainEvent e, CancellationToken ct) =>
         AddOrReplaceLineAsync(e, ct);
@@ -41,9 +41,10 @@ internal sealed class SalesOrderProjection
             .Set(x => x.Code, e.Code)
             .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.ClientId, e.ClientId)
-            .Set(x => x.ClientName, string.Empty) // fill later if you project client snapshot
+            .Set(x => x.ClientName, string.Empty)
             .Set(x => x.BranchId, e.BranchId)
-            .Set(x => x.BranchName, null) // fill later if you project branch snapshot
+            .Set(x => x.BranchName, null)
+            .Set(x => x.SellerUserId, e.SellerUserId)
             .Set(x => x.OrderDate, e.OrderDateUtc)
             .Set(x => x.Status, e.Status)
             .Set(x => x.Currency, e.Currency)
@@ -51,31 +52,50 @@ internal sealed class SalesOrderProjection
             .Set(x => x.Subtotal, e.Subtotal)
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
-            .Set(x => x.Total, e.Total);
+            .Set(x => x.Total, e.Total)
+            .Set(x => x.Notes, e.Notes)
+            .Set(x => x.CreatedAt, e.CreatedAtUtc)
+            .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
-    private async Task SetQuoteAsync(Guid salesOrderId, Guid quoteId, CancellationToken ct)
+    private async Task SetQuoteAsync(
+        Guid salesOrderId,
+        Guid quoteId,
+        DateTime updatedAtUtc,
+        CancellationToken ct
+    )
     {
         var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
 
         var id = $"so:{salesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<SalesOrderReadModel>.Update.Set(x => x.QuoteId, quoteId);
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.QuoteId, quoteId)
+            .Set(x => x.UpdatedAt, updatedAtUtc);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
-    private async Task SetStatusAsync(Guid salesOrderId, string status, CancellationToken ct)
+    private async Task SetConfirmedAsync(
+        Guid salesOrderId,
+        Guid sellerUserId,
+        string status,
+        DateTime updatedAtUtc,
+        CancellationToken ct
+    )
     {
         var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
 
         var id = $"so:{salesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<SalesOrderReadModel>.Update.Set(x => x.Status, status);
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.SellerUserId, sellerUserId)
+            .Set(x => x.Status, status)
+            .Set(x => x.UpdatedAt, updatedAtUtc);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -94,7 +114,7 @@ internal sealed class SalesOrderProjection
         {
             SalesOrderDetailId = e.SalesOrderDetailId,
             ProductId = e.ProductId,
-            ProductName = string.Empty, // fill later if you project product snapshot
+            ProductName = string.Empty,
             Quantity = e.Quantity,
             UnitPrice = e.UnitPrice,
             DiscountPerc = e.DiscountPerc,
@@ -109,7 +129,9 @@ internal sealed class SalesOrderProjection
 
         await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
 
-        var push = Builders<SalesOrderReadModel>.Update.Push(x => x.Lines, line);
+        var push = Builders<SalesOrderReadModel>
+            .Update.Push(x => x.Lines, line)
+            .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
 
         await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
     }

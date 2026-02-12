@@ -384,6 +384,47 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        // =========================
+        // Payroll
+        // =========================
+        new ScopeDefinition("payroll.read", "View payroll", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "payroll.create",
+            "Create/calculate payroll",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("payroll.update", "Update payroll", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "payroll.overtime.manage",
+            "Manage overtime entries",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "payroll.commission.manage",
+            "Adjust commissions",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "payroll.payslip.read",
+            "Download payslips",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "payroll.payslip.send",
+            "Send payslips by email",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "payroll.export",
+            "Export payroll/payment history",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

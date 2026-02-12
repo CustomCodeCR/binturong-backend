@@ -16,9 +16,6 @@ public sealed class SalesOrdersEndpoints : IEndpoint
     {
         var group = app.MapGroup("/api/sales-orders").WithTags("SalesOrders");
 
-        // =========================
-        // GET /api/sales-orders
-        // =========================
         group
             .MapGet(
                 "/",
@@ -42,9 +39,6 @@ public sealed class SalesOrdersEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.SalesOrdersRead);
 
-        // =========================
-        // GET /api/sales-orders/{id}
-        // =========================
         group
             .MapGet(
                 "/{id:guid}",
@@ -63,9 +57,6 @@ public sealed class SalesOrdersEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.SalesOrdersRead);
 
-        // =========================
-        // POST /api/sales-orders
-        // =========================
         group
             .MapPost(
                 "/",
@@ -78,6 +69,7 @@ public sealed class SalesOrdersEndpoints : IEndpoint
                     var cmd = new CreateSalesOrderCommand(
                         req.ClientId,
                         req.BranchId,
+                        req.SellerUserId,
                         req.Currency,
                         req.ExchangeRate,
                         req.Notes,
@@ -103,10 +95,6 @@ public sealed class SalesOrdersEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.SalesOrdersCreate);
 
-        // =========================
-        // POST /api/sales-orders/from-quote/{quoteId}
-        // HU-VTA-01 Convert quote -> sales order
-        // =========================
         group
             .MapPost(
                 "/from-quote/{quoteId:guid}",
@@ -137,10 +125,6 @@ public sealed class SalesOrdersEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.SalesOrdersConvertFromQuote);
 
-        // =========================
-        // POST /api/sales-orders/{id}/confirm
-        // HU-VTA-03 Scenario 3: commission trigger on confirmation
-        // =========================
         group
             .MapPost(
                 "/{id:guid}/confirm",

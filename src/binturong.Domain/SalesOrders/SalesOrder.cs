@@ -10,6 +10,7 @@ public sealed class SalesOrder : Entity
     public Guid? QuoteId { get; set; }
     public Guid ClientId { get; set; }
     public Guid? BranchId { get; set; }
+    public Guid? SellerUserId { get; set; }
     public DateTime OrderDate { get; set; }
     public string Status { get; set; } = string.Empty;
     public string Currency { get; set; } = string.Empty;
@@ -26,8 +27,7 @@ public sealed class SalesOrder : Entity
     public Domain.Clients.Client? Client { get; set; }
     public Domain.Branches.Branch? Branch { get; set; }
 
-    public ICollection<Domain.SalesOrderDetails.SalesOrderDetail> Details { get; set; } =
-        new List<Domain.SalesOrderDetails.SalesOrderDetail>();
+    public ICollection<SalesOrderDetail> Details { get; set; } = new List<SalesOrderDetail>();
     public ICollection<Domain.Invoices.Invoice> Invoices { get; set; } =
         new List<Domain.Invoices.Invoice>();
     public ICollection<Domain.Contracts.Contract> Contracts { get; set; } =
@@ -35,13 +35,21 @@ public sealed class SalesOrder : Entity
     public ICollection<Domain.PurchaseOrders.PurchaseOrder> PurchaseOrders { get; set; } =
         new List<Domain.PurchaseOrders.PurchaseOrder>();
 
-    public void RaiseCreated() =>
+    public void RaiseCreated()
+    {
+        var createdAtUtc = CreatedAt == default ? DateTime.UtcNow : CreatedAt;
+        var updatedAtUtc = UpdatedAt == default ? createdAtUtc : UpdatedAt;
+
+        CreatedAt = createdAtUtc;
+        UpdatedAt = updatedAtUtc;
+
         Raise(
             new SalesOrderCreatedDomainEvent(
                 Id,
                 Code,
                 ClientId,
                 BranchId,
+                SellerUserId,
                 OrderDate,
                 Status,
                 Currency,
@@ -50,17 +58,31 @@ public sealed class SalesOrder : Entity
                 Taxes,
                 Discounts,
                 Total,
-                QuoteId
+                QuoteId,
+                string.IsNullOrWhiteSpace(Notes) ? null : Notes,
+                createdAtUtc,
+                updatedAtUtc
             )
         );
+    }
 
-    public void RaiseConvertedFromQuote(Guid quoteId) =>
-        Raise(new SalesOrderConvertedFromQuoteDomainEvent(Id, quoteId));
+    public void RaiseConvertedFromQuote(Guid quoteId, DateTime updatedAtUtc)
+    {
+        UpdatedAt = updatedAtUtc;
+        Raise(new SalesOrderConvertedFromQuoteDomainEvent(Id, quoteId, updatedAtUtc));
+    }
 
-    public void RaiseConfirmed(Guid sellerUserId) =>
-        Raise(new SalesOrderConfirmedDomainEvent(Id, sellerUserId, Total));
+    public void RaiseConfirmed(Guid sellerUserId, DateTime updatedAtUtc)
+    {
+        SellerUserId = sellerUserId;
+        UpdatedAt = updatedAtUtc;
+        Raise(new SalesOrderConfirmedDomainEvent(Id, sellerUserId, Total, updatedAtUtc));
+    }
 
-    public void RaiseDetailAdded(SalesOrderDetail d) =>
+    public void RaiseDetailAdded(SalesOrderDetail d, DateTime updatedAtUtc)
+    {
+        UpdatedAt = updatedAtUtc;
+
         Raise(
             new SalesOrderDetailAddedDomainEvent(
                 Id,
@@ -70,7 +92,9 @@ public sealed class SalesOrder : Entity
                 d.UnitPrice,
                 d.DiscountPerc,
                 d.TaxPerc,
-                d.LineTotal
+                d.LineTotal,
+                updatedAtUtc
             )
         );
+    }
 }

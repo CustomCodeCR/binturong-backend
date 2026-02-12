@@ -11,6 +11,7 @@ public sealed class EmployeeReadModel
 
     public string FullName { get; init; } = default!;
     public string NationalId { get; init; } = default!;
+    public string Email { get; init; } = default!;
     public string JobTitle { get; init; } = default!;
     public decimal BaseSalary { get; init; }
 

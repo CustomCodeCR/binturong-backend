@@ -11,6 +11,7 @@ public sealed record CreateSalesOrderLineRequest(
 public sealed record CreateSalesOrderRequest(
     Guid ClientId,
     Guid? BranchId,
+    Guid? SellerUserId,
     string Currency,
     decimal ExchangeRate,
     string? Notes,

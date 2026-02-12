@@ -214,6 +214,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.Payrolls.Payroll> Payrolls => Set<Domain.Payrolls.Payroll>();
     public DbSet<Domain.PayrollDetails.PayrollDetail> PayrollDetails =>
         Set<Domain.PayrollDetails.PayrollDetail>();
+    public DbSet<Domain.PayrollOvertimes.PayrollOvertimeEntry> PayrollOvertimeEntries =>
+        Set<Domain.PayrollOvertimes.PayrollOvertimeEntry>();
 
     public DbSet<Domain.Services.Service> Services => Set<Domain.Services.Service>();
     public DbSet<Domain.ServiceOrders.ServiceOrder> ServiceOrders =>

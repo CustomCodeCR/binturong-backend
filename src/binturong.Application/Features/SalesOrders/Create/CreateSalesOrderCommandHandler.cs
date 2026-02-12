@@ -31,6 +31,14 @@ internal sealed class CreateSalesOrderCommandHandler
                 Error.NotFound("Branches.NotFound", $"Branch '{cmd.BranchId}' not found.")
             );
 
+        if (
+            cmd.SellerUserId is not null
+            && !await _db.Users.AnyAsync(x => x.Id == cmd.SellerUserId, ct)
+        )
+            return Result.Failure<Guid>(
+                Error.NotFound("Users.NotFound", $"User '{cmd.SellerUserId}' not found.")
+            );
+
         var now = DateTime.UtcNow;
 
         var so = new SalesOrder
@@ -39,11 +47,14 @@ internal sealed class CreateSalesOrderCommandHandler
             Code = await NextCodeAsync(ct),
             ClientId = cmd.ClientId,
             BranchId = cmd.BranchId,
+            SellerUserId = cmd.SellerUserId,
             OrderDate = now,
             Status = "Draft",
             Currency = cmd.Currency.Trim(),
             ExchangeRate = cmd.ExchangeRate,
             Notes = cmd.Notes?.Trim() ?? string.Empty,
+            CreatedAt = now,
+            UpdatedAt = now,
         };
 
         decimal subtotal = 0m,
@@ -86,7 +97,7 @@ internal sealed class CreateSalesOrderCommandHandler
             };
 
             so.Details.Add(d);
-            so.RaiseDetailAdded(d);
+            so.RaiseDetailAdded(d, now);
 
             subtotal += lineBase;
             discounts += lineDiscount;

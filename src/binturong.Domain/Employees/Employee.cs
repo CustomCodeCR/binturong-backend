@@ -10,6 +10,7 @@ public sealed class Employee : Entity
     public Guid? BranchId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string NationalId { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
     public string JobTitle { get; set; } = string.Empty;
     public decimal BaseSalary { get; set; }
     public DateOnly HireDate { get; set; }
@@ -34,6 +35,7 @@ public sealed class Employee : Entity
                 Id,
                 FullName,
                 NationalId,
+                Email,
                 JobTitle,
                 BaseSalary,
                 BranchId,
@@ -44,7 +46,15 @@ public sealed class Employee : Entity
 
     public void RaiseUpdated() =>
         Raise(
-            new EmployeeUpdatedDomainEvent(Id, FullName, JobTitle, BaseSalary, BranchId, IsActive)
+            new EmployeeUpdatedDomainEvent(
+                Id,
+                FullName,
+                Email,
+                JobTitle,
+                BaseSalary,
+                BranchId,
+                IsActive
+            )
         );
 
     public void RaiseDeleted() => Raise(new EmployeeDeletedDomainEvent(Id));
