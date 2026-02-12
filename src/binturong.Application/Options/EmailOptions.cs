@@ -2,12 +2,15 @@ namespace Application.Options;
 
 public sealed class EmailOptions
 {
-    public bool Enabled { get; init; } = true;
-    public string Host { get; init; } = string.Empty;
+    public string? Host { get; init; }
     public int Port { get; init; } = 587;
     public bool UseSsl { get; init; } = true;
-    public string User { get; init; } = string.Empty;
-    public string Password { get; init; } = string.Empty;
-    public string FromEmail { get; init; } = string.Empty;
+    public string? Username { get; init; }
+    public string? Password { get; init; }
+    public string FromEmail { get; init; } = "noreply@binturong.local";
     public string FromName { get; init; } = "Binturong";
+
+    public string? AdminEmail { get; init; }
+    public string? PurchasesEmail { get; init; }
+    public string? ContractsEmail { get; init; }
 }

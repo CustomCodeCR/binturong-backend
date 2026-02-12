@@ -1,8 +1,12 @@
+using Application.Abstractions.Background;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Notifications;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
 using Application.Features.Common.Audit;
+using Application.Features.Inventory.Alerts;
+using Application.Options;
 using Domain.Inventory;
 using Domain.InventoryMovements;
 using Domain.InventoryMovementTypes;
@@ -19,6 +23,9 @@ internal sealed class RegisterServiceExitCommandHandler
     private readonly ICommandBus _bus;
     private readonly IRequestContext _request;
     private readonly ICurrentUser _currentUser;
+    private readonly IRealtimeNotifier _realtime;
+    private readonly IBackgroundJobScheduler _jobs;
+    private readonly EmailOptions _emailOptions;
 
     private const string SourceModule = "ServiceOrders";
 
@@ -26,13 +33,19 @@ internal sealed class RegisterServiceExitCommandHandler
         IApplicationDbContext db,
         ICommandBus bus,
         IRequestContext request,
-        ICurrentUser currentUser
+        ICurrentUser currentUser,
+        IRealtimeNotifier realtime,
+        IBackgroundJobScheduler jobs,
+        EmailOptions emailOptions
     )
     {
         _db = db;
         _bus = bus;
         _request = request;
         _currentUser = currentUser;
+        _realtime = realtime;
+        _jobs = jobs;
+        _emailOptions = emailOptions;
     }
 
     public async Task<Result<Guid>> Handle(RegisterServiceExitCommand command, CancellationToken ct)
@@ -149,6 +162,18 @@ internal sealed class RegisterServiceExitCommandHandler
                 stock.MaxStock,
                 now
             )
+        );
+
+        await LowStockAlertHelper.HandleLowStockAsync(
+            stock,
+            stock.ProductId,
+            stock.WarehouseId,
+            now,
+            _realtime,
+            _jobs,
+            _emailOptions,
+            _currentUser,
+            ct
         );
 
         _db.InventoryMovements.Add(movement);

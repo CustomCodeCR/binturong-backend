@@ -18,23 +18,25 @@ public sealed class SmtpEmailSender : IEmailSender
         CancellationToken ct
     )
     {
-        if (!_opt.Enabled)
+        if (string.IsNullOrWhiteSpace(_opt.Host))
             return;
 
-        using var msg = new MailMessage();
-        msg.From = new MailAddress(_opt.FromEmail, _opt.FromName);
-        msg.To.Add(toEmail);
-        msg.Subject = subject;
-        msg.Body = htmlBody;
-        msg.IsBodyHtml = true;
+        using var client = new SmtpClient(_opt.Host, _opt.Port) { EnableSsl = _opt.UseSsl };
 
-        using var client = new SmtpClient(_opt.Host, _opt.Port)
+        if (!string.IsNullOrWhiteSpace(_opt.Username))
+            client.Credentials = new NetworkCredential(_opt.Username, _opt.Password);
+
+        using var msg = new MailMessage
         {
-            EnableSsl = _opt.UseSsl,
-            Credentials = new NetworkCredential(_opt.User, _opt.Password),
+            From = new MailAddress(_opt.FromEmail, _opt.FromName),
+            Subject = subject,
+            Body = htmlBody,
+            IsBodyHtml = true,
         };
 
-        // SmtpClient has no true cancellation; best effort
+        msg.To.Add(toEmail);
+
+        ct.ThrowIfCancellationRequested();
         await client.SendMailAsync(msg);
     }
 }

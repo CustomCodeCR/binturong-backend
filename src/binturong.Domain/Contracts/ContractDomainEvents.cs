@@ -29,3 +29,10 @@ public sealed record ContractUpdatedDomainEvent(
 ) : IDomainEvent;
 
 public sealed record ContractDeletedDomainEvent(Guid ContractId) : IDomainEvent;
+
+public sealed record ContractRenewedDomainEvent(
+    Guid ContractId,
+    DateOnly NewStartDate,
+    DateOnly NewEndDate,
+    DateTime RenewedAtUtc
+) : IDomainEvent;

@@ -1,10 +1,14 @@
 using Application.Abstractions.Authentication;
+using Application.Abstractions.Background;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Notifications;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
 using Application.Features.Audit.Create;
+using Application.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SharedKernel;
 
 namespace Application.Features.Auth.Login;
@@ -17,6 +21,9 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
     private readonly IPermissionService _permissions;
     private readonly IRequestContext _request;
     private readonly ICommandBus _bus;
+    private readonly IRealtimeNotifier _realtime;
+    private readonly IBackgroundJobScheduler _jobs;
+    private readonly EmailOptions _emailOptions;
 
     public LoginCommandHandler(
         IApplicationDbContext db,
@@ -24,7 +31,10 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
         IJwtTokenGenerator jwt,
         IPermissionService permissions,
         IRequestContext request,
-        ICommandBus bus
+        ICommandBus bus,
+        IRealtimeNotifier realtime,
+        IBackgroundJobScheduler jobs,
+        EmailOptions emailOptions
     )
     {
         _db = db;
@@ -33,6 +43,9 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
         _permissions = permissions;
         _request = request;
         _bus = bus;
+        _realtime = realtime;
+        _jobs = jobs;
+        _emailOptions = emailOptions;
     }
 
     public async Task<Result<LoginResponse>> Handle(LoginCommand command, CancellationToken ct)
@@ -48,22 +61,19 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             ct
         );
 
-        // =========================
-        // User not found
-        // =========================
         if (user is null)
         {
             await _bus.Send(
                 new CreateAuditLogCommand(
-                    null, // UserId
-                    "Auth", // Module
-                    "User", // Entity
-                    null, // EntityId
-                    "LOGIN_FAILED", // Action
-                    string.Empty, // DataBefore
-                    $"usernameOrEmail={command.UsernameOrEmail}", // DataAfter
-                    ip, // Ip
-                    userAgent // UserAgent
+                    null,
+                    "Auth",
+                    "User",
+                    null,
+                    "LOGIN_FAILED",
+                    string.Empty,
+                    $"usernameOrEmail={command.UsernameOrEmail}",
+                    ip,
+                    userAgent
                 ),
                 ct
             );
@@ -71,9 +81,6 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             return Result.Failure<LoginResponse>(LoginErrors.InvalidCredentials);
         }
 
-        // =========================
-        // User inactive
-        // =========================
         if (!user.IsActive)
         {
             await _bus.Send(
@@ -94,9 +101,6 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             return Result.Failure<LoginResponse>(LoginErrors.UserInactive);
         }
 
-        // =========================
-        // User locked
-        // =========================
         if (user.LockedUntil is not null && user.LockedUntil.Value > DateTime.UtcNow)
         {
             await _bus.Send(
@@ -117,9 +121,6 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             return Result.Failure<LoginResponse>(LoginErrors.UserLocked);
         }
 
-        // =========================
-        // Password validation
-        // =========================
         if (!_hasher.Verify(command.Password, user.PasswordHash))
         {
             user.FailedAttempts += 1;
@@ -146,12 +147,54 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
                 ct
             );
 
+            if (user.FailedAttempts == 5)
+            {
+                var now = DateTime.UtcNow;
+
+                await _realtime.NotifyRoleAsync(
+                    "Admin",
+                    "security.suspicious_login",
+                    new
+                    {
+                        userId = user.Id,
+                        username = user.Username,
+                        email = user.Email,
+                        failedAttempts = user.FailedAttempts,
+                        lockedUntil = user.LockedUntil,
+                        ip,
+                        userAgent,
+                        atUtc = now,
+                    },
+                    ct
+                );
+
+                var to = _emailOptions.AdminEmail ?? "admin@local";
+                await _jobs.EnqueueAsync(
+                    async (sp, token) =>
+                    {
+                        var email = sp.GetRequiredService<IEmailSender>();
+                        await email.SendAsync(
+                            to,
+                            "Alerta: actividad sospechosa (login)",
+                            $@"
+<h3>Actividad sospechosa</h3>
+<p><b>User:</b> {user.Username} ({user.Email})</p>
+<p><b>FailedAttempts:</b> {user.FailedAttempts}</p>
+<p><b>LockedUntil:</b> {user.LockedUntil:O}</p>
+<p><b>IP:</b> {ip}</p>
+<p><b>UserAgent:</b> {userAgent}</p>
+<p><b>At:</b> {now:O}</p>
+",
+                            token
+                        );
+                    },
+                    ct
+                );
+            }
+
             return Result.Failure<LoginResponse>(LoginErrors.InvalidCredentials);
         }
 
-        // =========================
-        // Successful login
-        // =========================
         user.FailedAttempts = 0;
         user.LockedUntil = null;
         user.LastLogin = DateTime.UtcNow;
@@ -174,9 +217,6 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             ct
         );
 
-        // =========================
-        // Token generation
-        // =========================
         var roles = await _permissions.GetUserRoleNamesAsync(user.Id, ct);
         var scopes = await _permissions.GetUserScopesAsync(user.Id, ct);
 

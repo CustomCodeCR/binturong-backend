@@ -25,7 +25,6 @@ internal sealed class ProductStockProjection : IProjector<WarehouseStockChangedD
         var stockId = $"stock:{e.ProductId}";
         var filter = Builders<ProductStockReadModel>.Filter.Eq(x => x.Id, stockId);
 
-        // Ensure document exists
         var upsert = Builders<ProductStockReadModel>
             .Update.SetOnInsert(x => x.Id, stockId)
             .SetOnInsert(x => x.ProductId, e.ProductId)
@@ -33,7 +32,6 @@ internal sealed class ProductStockProjection : IProjector<WarehouseStockChangedD
 
         await stocks.UpdateOneAsync(filter, upsert, new UpdateOptions { IsUpsert = true }, ct);
 
-        // Replace warehouse entry (idempotent)
         var pull = Builders<ProductStockReadModel>.Update.PullFilter(
             x => x.Warehouses,
             w => w.WarehouseId == e.WarehouseId
@@ -57,7 +55,6 @@ internal sealed class ProductStockProjection : IProjector<WarehouseStockChangedD
 
         await stocks.UpdateOneAsync(filter, push, cancellationToken: ct);
 
-        // Recalc total
         var doc = await stocks.Find(x => x.Id == stockId).FirstOrDefaultAsync(ct);
         if (doc is not null)
         {

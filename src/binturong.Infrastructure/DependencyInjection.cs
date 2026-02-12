@@ -1,20 +1,30 @@
 using System.Text;
+using Amazon;
+using Amazon.S3;
 using Application.Abstractions.Authentication;
+using Application.Abstractions.Background;
 using Application.Abstractions.Data;
+using Application.Abstractions.Documents;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Notifications;
 using Application.Abstractions.Outbox;
 using Application.Abstractions.Projections;
 using Application.Abstractions.Security;
+using Application.Abstractions.Storage;
+using Application.Options;
 using Infrastructure.Authentication;
 using Infrastructure.Authorization;
+using Infrastructure.Background;
 using Infrastructure.Database.Mongo;
 using Infrastructure.Database.Mongo.Migrations;
 using Infrastructure.Database.Outbox;
 using Infrastructure.Database.Postgres;
 using Infrastructure.Database.Postgres.Seed;
+using Infrastructure.Documents;
 using Infrastructure.Messaging;
+using Infrastructure.Notifications;
 using Infrastructure.Security;
-using Infrastructure.Services;
+using Infrastructure.Storage;
 using Infrastructure.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +33,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using MongoDB.Bson; // IMPORTANT for GuidRepresentation
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
@@ -44,37 +53,22 @@ public static class DependencyInjection
         services.AddOutboxAndProjections(configuration);
         services.AddHealthChecks(configuration);
 
-        // =========================
-        // Platform services
-        // =========================
         services.AddPlatformServices(configuration);
 
         services.AddAuthenticationInternal(configuration);
         services.AddAuthorizationInternal();
 
-        // =========================
-        // Security seeders
-        // =========================
         services.AddScoped<ScopeSeeder>();
         services.AddScoped<RoleSeeder>();
         services.AddScoped<AdminUserSeeder>();
 
-        // =========================
-        // Security services (used by API filters + Login)
-        // =========================
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAdminPasswordResetService, AdminPasswordResetService>();
 
-        // =========================
-        // Auth services
-        // =========================
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
-
-        // If you still use these internally elsewhere, keep them:
         services.AddSingleton<ITokenProvider, TokenProvider>();
 
-        // Current user (reads HttpContext.User claims)
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
@@ -88,18 +82,12 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Core services
-    // =========================
     private static IServiceCollection AddCoreServices(this IServiceCollection services)
     {
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         return services;
     }
 
-    // =========================
-    // Postgres (Write model)
-    // =========================
     private static IServiceCollection AddDatabase(
         this IServiceCollection services,
         IConfiguration configuration
@@ -131,9 +119,6 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Mongo (Read model)
-    // =========================
     private static IServiceCollection AddMongo(
         this IServiceCollection services,
         IConfiguration configuration
@@ -146,19 +131,17 @@ public static class DependencyInjection
 
         var mongoDbName = configuration["Mongo:Database"] ?? "binturong_read";
 
-        // MongoDB: store Guid as UUID Standard
         try
         {
-            BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
+            BsonSerializer.RegisterSerializer(
+                new GuidSerializer(MongoDB.Bson.GuidRepresentation.Standard)
+            );
             BsonSerializer.RegisterSerializer(
                 typeof(Guid),
-                new GuidSerializer(GuidRepresentation.Standard)
+                new GuidSerializer(MongoDB.Bson.GuidRepresentation.Standard)
             );
         }
-        catch
-        {
-            // ignore if already registered
-        }
+        catch { }
 
         services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConn));
 
@@ -179,9 +162,6 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Outbox + projections
-    // =========================
     private static IServiceCollection AddOutboxAndProjections(
         this IServiceCollection services,
         IConfiguration configuration
@@ -207,9 +187,45 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Health checks
-    // =========================
+    private static IServiceCollection AddPlatformServices(
+        this IServiceCollection services,
+        IConfiguration config
+    )
+    {
+        var storageOpt = config.GetSection("Storage").Get<StorageOptions>() ?? new StorageOptions();
+        var emailOpt = config.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
+
+        services.AddSingleton(storageOpt);
+        services.AddSingleton(emailOpt);
+
+        services.AddSingleton<LocalObjectStorage>();
+
+        services.AddSingleton<IAmazonS3>(_ =>
+        {
+            var regionName = config["AWS:Region"] ?? config["AWS_REGION"] ?? "us-east-1";
+            var region = RegionEndpoint.GetBySystemName(regionName);
+            var s3Config = new AmazonS3Config { RegionEndpoint = region };
+            return new AmazonS3Client(s3Config);
+        });
+
+        services.AddSingleton<S3ObjectStorage>();
+        services.AddScoped<IObjectStorage, HybridObjectStorage>();
+        services.AddSingleton<IObjectStorageKeyBuilder, DefaultObjectStorageKeyBuilder>();
+
+        services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+        services.AddSingleton<IBackgroundJobScheduler, BackgroundJobScheduler>();
+        services.AddHostedService<BackgroundWorker>();
+        services.AddHostedService<ContractRenewalWorker>();
+
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
+
+        services.AddScoped<IPdfGenerator, IronPdfGenerator>();
+        services.AddScoped<IExcelExporter, ClosedXmlExcelExporter>();
+
+        return services;
+    }
+
     private static IServiceCollection AddHealthChecks(
         this IServiceCollection services,
         IConfiguration configuration
@@ -224,9 +240,6 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Authentication (JWT)
-    // =========================
     private static IServiceCollection AddAuthenticationInternal(
         this IServiceCollection services,
         IConfiguration configuration
@@ -259,9 +272,6 @@ public static class DependencyInjection
         return services;
     }
 
-    // =========================
-    // Authorization
-    // =========================
     private static IServiceCollection AddAuthorizationInternal(this IServiceCollection services)
     {
         services.AddAuthorization();

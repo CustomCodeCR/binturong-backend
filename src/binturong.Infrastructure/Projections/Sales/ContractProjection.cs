@@ -13,7 +13,8 @@ internal sealed class ContractProjection
         IProjector<ContractDeletedDomainEvent>,
         IProjector<ContractMilestoneAddedDomainEvent>,
         IProjector<ContractMilestoneUpdatedDomainEvent>,
-        IProjector<ContractMilestoneRemovedDomainEvent>
+        IProjector<ContractMilestoneRemovedDomainEvent>,
+        IProjector<ContractRenewedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -96,6 +97,20 @@ internal sealed class ContractProjection
         await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
     }
 
+    public async Task ProjectAsync(ContractRenewedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
+        var id = $"contract:{e.ContractId}";
+        var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<ContractReadModel>
+            .Update.Set(x => x.StartDate, ToUtcDate(e.NewStartDate))
+            .Set(x => x.EndDate, ToUtcDate(e.NewEndDate))
+            .Set(x => x.Status, "Active");
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
     private async Task UpsertHeaderAsync(
         Guid contractId,
         string code,
@@ -120,7 +135,7 @@ internal sealed class ContractProjection
             .SetOnInsert(x => x.ContractId, contractId)
             .Set(x => x.Code, code)
             .Set(x => x.ClientId, clientId)
-            .Set(x => x.ClientName, string.Empty) // fill later if you project client snapshots
+            .Set(x => x.ClientName, string.Empty)
             .Set(x => x.QuoteId, quoteId)
             .Set(x => x.SalesOrderId, salesOrderId)
             .Set(x => x.StartDate, ToUtcDate(startDate))
@@ -149,14 +164,12 @@ internal sealed class ContractProjection
         var id = $"contract:{contractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
-        // Remove any existing milestone with same id
         var pull = Builders<ContractReadModel>.Update.PullFilter(
             x => x.Milestones,
             m => m.MilestoneId == milestoneId
         );
         await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
 
-        // Push the new milestone
         var line = new ContractMilestoneReadModel
         {
             MilestoneId = milestoneId,

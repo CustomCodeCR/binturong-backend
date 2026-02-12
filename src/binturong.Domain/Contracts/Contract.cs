@@ -7,24 +7,38 @@ public sealed class Contract : Entity
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
+
     public Guid ClientId { get; set; }
     public Guid? QuoteId { get; set; }
     public Guid? SalesOrderId { get; set; }
+
     public DateOnly StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+
     public string Status { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+
+    public bool AutoRenewEnabled { get; set; }
+    public int AutoRenewEveryDays { get; set; } = 365;
+    public int ExpiryNoticeDays { get; set; } = 30;
+
+    public bool ExpiryAlertActive { get; set; }
+    public DateTime? ExpiryLastNotifiedAtUtc { get; set; }
+
+    public DateTime? RenewedAtUtc { get; set; }
+    public Guid? ResponsibleUserId { get; set; }
 
     public Domain.Clients.Client? Client { get; set; }
     public Domain.Quotes.Quote? Quote { get; set; }
     public Domain.SalesOrders.SalesOrder? SalesOrder { get; set; }
 
-    public ICollection<Domain.ContractBillingMilestones.ContractBillingMilestone> BillingMilestones { get; set; } =
-        new List<Domain.ContractBillingMilestones.ContractBillingMilestone>();
+    public ICollection<ContractBillingMilestone> BillingMilestones { get; set; } =
+        new List<ContractBillingMilestone>();
 
     public ICollection<Domain.Invoices.Invoice> Invoices { get; set; } =
         new List<Domain.Invoices.Invoice>();
+
     public ICollection<Domain.ServiceOrders.ServiceOrder> ServiceOrders { get; set; } =
         new List<Domain.ServiceOrders.ServiceOrder>();
 
@@ -103,5 +117,47 @@ public sealed class Contract : Entity
             BillingMilestones.Remove(existing);
 
         Raise(new ContractMilestoneRemovedDomainEvent(Id, milestoneId));
+    }
+
+    public bool IsExpiringSoon(DateOnly today)
+    {
+        if (EndDate is null)
+            return false;
+
+        var daysLeft = EndDate.Value.DayNumber - today.DayNumber;
+        return daysLeft >= 0 && daysLeft <= ExpiryNoticeDays;
+    }
+
+    public bool IsExpired(DateOnly today) =>
+        EndDate is not null && EndDate.Value.DayNumber < today.DayNumber;
+
+    public void MarkExpiryNotified(DateTime nowUtc)
+    {
+        ExpiryAlertActive = true;
+        ExpiryLastNotifiedAtUtc = nowUtc;
+    }
+
+    public void ClearExpiryAlert()
+    {
+        ExpiryAlertActive = false;
+    }
+
+    public void Renew(DateOnly today, DateTime nowUtc)
+    {
+        if (EndDate is null)
+            return;
+
+        var newStart = EndDate.Value.AddDays(1);
+        var newEnd = newStart.AddDays(Math.Max(1, AutoRenewEveryDays));
+
+        StartDate = newStart;
+        EndDate = newEnd;
+        RenewedAtUtc = nowUtc;
+        Status = "Active";
+
+        ClearExpiryAlert();
+
+        Raise(new ContractRenewedDomainEvent(Id, newStart, newEnd, nowUtc));
+        RaiseUpdated();
     }
 }
