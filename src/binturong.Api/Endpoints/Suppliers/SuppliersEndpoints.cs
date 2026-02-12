@@ -4,9 +4,13 @@ using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
 using Application.Features.Suppliers.GetSupplierById;
 using Application.Features.Suppliers.GetSuppliers;
+using Application.Features.Suppliers.History.ExportSupplierPurchaseHistoryExcel;
+using Application.Features.Suppliers.History.ExportSupplierPurchaseHistoryPdf;
+using Application.Features.Suppliers.History.GetSupplierPurchaseHistory;
 using Application.Features.Suppliers.SetCreditConditions;
 using Application.Features.Suppliers.Update;
 using Application.ReadModels.CRM;
+using Application.ReadModels.Purchases;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Suppliers;
@@ -51,6 +55,98 @@ public sealed class SuppliersEndpoints : IEndpoint
                     return result.IsFailure
                         ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/purchase-history",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    int? skip,
+                    int? take,
+                    IQueryHandler<
+                        GetSupplierPurchaseHistoryQuery,
+                        IReadOnlyList<PurchaseOrderReadModel>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new GetSupplierPurchaseHistoryQuery(
+                            id,
+                            from,
+                            to,
+                            status,
+                            skip ?? 0,
+                            take ?? 50
+                        ),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/purchase-history/pdf",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    ICommandHandler<ExportSupplierPurchaseHistoryPdfCommand, byte[]> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ExportSupplierPurchaseHistoryPdfCommand(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.File(
+                            result.Value,
+                            "application/pdf",
+                            $"supplier_purchase_history_{id:N}.pdf"
+                        );
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/purchase-history/excel",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    ICommandHandler<ExportSupplierPurchaseHistoryExcelCommand, byte[]> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ExportSupplierPurchaseHistoryExcelCommand(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.File(
+                            result.Value,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            $"supplier_purchase_history_{id:N}.xlsx"
+                        );
                 }
             )
             .RequireScope(SecurityScopes.SuppliersRead);
@@ -146,7 +242,6 @@ public sealed class SuppliersEndpoints : IEndpoint
                     CancellationToken ct
                 ) =>
                 {
-                    // 🔐 Replace with real authorization later
                     var hasPermission = true;
 
                     var cmd = new SetSupplierCreditConditionsCommand(

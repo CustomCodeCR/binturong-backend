@@ -4,8 +4,13 @@ using Application.Features.Branches.Create;
 using Application.Features.Branches.Delete;
 using Application.Features.Branches.GetBranchById;
 using Application.Features.Branches.GetBranches;
+using Application.Features.Branches.Reports.ExportBranchSalesReportExcel;
+using Application.Features.Branches.Reports.ExportBranchSalesReportPdf;
+using Application.Features.Branches.Reports.GetBranchComparisonReport;
+using Application.Features.Branches.Reports.GetBranchSalesReport;
 using Application.Features.Branches.Update;
 using Application.ReadModels.MasterData;
+using Application.ReadModels.Reports;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Branches;
@@ -51,6 +56,114 @@ public sealed class BranchesEndpoints : IEndpoint
                     return result.IsFailure
                         ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.BranchesRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/reports/sales",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    IQueryHandler<GetBranchSalesReportQuery, BranchSalesReportReadModel> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new GetBranchSalesReportQuery(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.BranchesRead);
+
+        group
+            .MapGet(
+                "/reports/compare",
+                async (
+                    Guid branchAId,
+                    Guid branchBId,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    IQueryHandler<
+                        GetBranchComparisonReportQuery,
+                        BranchComparisonReportReadModel
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new GetBranchComparisonReportQuery(branchAId, branchBId, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.BranchesRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/reports/sales/pdf",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    ICommandHandler<ExportBranchSalesReportPdfCommand, byte[]> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ExportBranchSalesReportPdfCommand(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.File(
+                            result.Value,
+                            "application/pdf",
+                            $"branch_sales_report_{id:N}.pdf"
+                        );
+                }
+            )
+            .RequireScope(SecurityScopes.BranchesRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/reports/sales/excel",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    ICommandHandler<ExportBranchSalesReportExcelCommand, byte[]> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ExportBranchSalesReportExcelCommand(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.File(
+                            result.Value,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            $"branch_sales_report_{id:N}.xlsx"
+                        );
                 }
             )
             .RequireScope(SecurityScopes.BranchesRead);

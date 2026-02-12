@@ -4,8 +4,11 @@ using Application.Features.Clients.Create;
 using Application.Features.Clients.Delete;
 using Application.Features.Clients.GetClientById;
 using Application.Features.Clients.GetClients;
+using Application.Features.Clients.History.ExportClientHistoryPdf;
+using Application.Features.Clients.History.GetClientHistory;
 using Application.Features.Clients.Update;
 using Application.ReadModels.CRM;
+using Application.ReadModels.Sales;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Clients;
@@ -51,6 +54,63 @@ public sealed class ClientsEndpoints : IEndpoint
                     return result.IsFailure
                         ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.ClientsRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/history",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    int? skip,
+                    int? take,
+                    IQueryHandler<
+                        GetClientHistoryQuery,
+                        IReadOnlyList<SalesOrderReadModel>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new GetClientHistoryQuery(id, from, to, status, skip ?? 0, take ?? 50),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.ClientsRead);
+
+        group
+            .MapGet(
+                "/{id:guid}/history/pdf",
+                async (
+                    Guid id,
+                    DateTime? from,
+                    DateTime? to,
+                    string? status,
+                    ICommandHandler<ExportClientHistoryPdfCommand, byte[]> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ExportClientHistoryPdfCommand(id, from, to, status),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.File(
+                            result.Value,
+                            "application/pdf",
+                            $"client_history_{id:N}.pdf"
+                        );
                 }
             )
             .RequireScope(SecurityScopes.ClientsRead);
