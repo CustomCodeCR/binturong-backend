@@ -48,3 +48,14 @@ public sealed record UpdateContractMilestoneRequest(
     bool IsBilled,
     Guid? InvoiceId
 );
+
+public sealed record ConvertQuoteToContractRequest(
+    DateOnly StartDate,
+    DateOnly? EndDate,
+    Guid ResponsibleUserId,
+    string Description,
+    string Notes,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays
+);

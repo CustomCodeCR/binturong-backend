@@ -36,3 +36,19 @@ public sealed record ContractRenewedDomainEvent(
     DateOnly NewEndDate,
     DateTime RenewedAtUtc
 ) : IDomainEvent;
+
+public sealed record ContractCreatedFromQuoteDomainEvent(
+    Guid ContractId,
+    Guid QuoteId,
+    DateOnly StartDate,
+    DateOnly? EndDate,
+    Guid ResponsibleUserId,
+    DateTime CreatedAtUtc
+) : IDomainEvent;
+
+public sealed record ContractExpiryNoticeSentDomainEvent(
+    Guid ContractId,
+    DateOnly? EndDate,
+    int NoticeDays,
+    DateTime NotifiedAtUtc
+) : IDomainEvent;

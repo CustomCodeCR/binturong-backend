@@ -3,19 +3,19 @@ namespace Application.ReadModels.Sales;
 public sealed class InvoiceReadModel
 {
     public string Id { get; init; } = default!; // "invoice:{InvoiceId}"
-    public int InvoiceId { get; init; }
+    public Guid InvoiceId { get; init; }
 
     public string? TaxKey { get; init; }
     public string? Consecutive { get; init; }
 
-    public int ClientId { get; init; }
+    public Guid ClientId { get; init; }
     public string ClientName { get; init; } = default!;
 
-    public int? BranchId { get; init; }
+    public Guid? BranchId { get; init; }
     public string? BranchName { get; init; }
 
-    public int? SalesOrderId { get; init; }
-    public int? ContractId { get; init; }
+    public Guid? SalesOrderId { get; init; }
+    public Guid? ContractId { get; init; }
 
     public DateTime IssueDate { get; init; }
     public string DocumentType { get; init; } = default!;
@@ -44,9 +44,9 @@ public sealed class InvoiceReadModel
 
 public sealed class InvoiceLineReadModel
 {
-    public int InvoiceDetailId { get; init; }
+    public Guid InvoiceDetailId { get; init; }
 
-    public int ProductId { get; init; }
+    public Guid ProductId { get; init; }
     public string Description { get; init; } = default!;
 
     public decimal Quantity { get; init; }

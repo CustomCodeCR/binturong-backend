@@ -384,6 +384,12 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        new ScopeDefinition(
+            "contracts.convert_from_quote",
+            "Convert accepted quote to contract",
+            Roles.Admin,
+            Roles.Manager
+        ),
         // =========================
         // Payroll
         // =========================
@@ -422,6 +428,51 @@ public static class ScopeRegistry
         new ScopeDefinition(
             "payroll.export",
             "Export payroll/payment history",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        // =========================
+        // Invoices
+        // =========================
+        new ScopeDefinition(
+            "invoices.read",
+            "View invoices",
+            Roles.Admin,
+            Roles.Manager,
+            Roles.Operator
+        ),
+        new ScopeDefinition("invoices.create", "Create invoices", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("invoices.update", "Update invoices", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("invoices.delete", "Delete invoices", Roles.Admin),
+        new ScopeDefinition("invoices.emit", "Emit electronic invoice", Roles.Admin, Roles.Manager),
+        // =========================
+        // Payments (Accounts Receivable)
+        // =========================
+        new ScopeDefinition("payments.read", "View payments", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("payments.create", "Register payments", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("payments.delete", "Delete payments", Roles.Admin),
+        // =========================
+        // Credit Notes
+        // =========================
+        new ScopeDefinition("credit_notes.read", "View credit notes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "credit_notes.create",
+            "Create credit notes",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("credit_notes.delete", "Delete credit notes", Roles.Admin),
+        new ScopeDefinition("credit_notes.emit", "Emit credit notes", Roles.Admin, Roles.Manager),
+        // =========================
+        // Debit Notes
+        // =========================
+        new ScopeDefinition("debit_notes.read", "View debit notes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("debit_notes.create", "Create debit notes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("debit_notes.delete", "Delete debit notes", Roles.Admin),
+        new ScopeDefinition("debit_notes.emit", "Emit debit notes", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "invoices.convert_from_quote",
+            "Convert accepted quote to invoice",
             Roles.Admin,
             Roles.Manager
         ),

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("binturong.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+50381b486f5d2cdcba82e43a364293895dce6a2b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+442692cf16d1af52a78b1d1982d75a09f742cce2")]
 [assembly: System.Reflection.AssemblyProductAttribute("binturong.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("binturong.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

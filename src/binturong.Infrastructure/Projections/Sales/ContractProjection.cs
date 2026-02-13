@@ -14,7 +14,9 @@ internal sealed class ContractProjection
         IProjector<ContractMilestoneAddedDomainEvent>,
         IProjector<ContractMilestoneUpdatedDomainEvent>,
         IProjector<ContractMilestoneRemovedDomainEvent>,
-        IProjector<ContractRenewedDomainEvent>
+        IProjector<ContractRenewedDomainEvent>,
+        IProjector<ContractExpiryNoticeSentDomainEvent>,
+        IProjector<ContractCreatedFromQuoteDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -106,6 +108,31 @@ internal sealed class ContractProjection
         var update = Builders<ContractReadModel>
             .Update.Set(x => x.StartDate, ToUtcDate(e.NewStartDate))
             .Set(x => x.EndDate, ToUtcDate(e.NewEndDate))
+            .Set(x => x.Status, "Active");
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(ContractExpiryNoticeSentDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
+        var id = $"contract:{e.ContractId}";
+        var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<ContractReadModel>.Update.Set(x => x.Status, "ExpiringSoon");
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(ContractCreatedFromQuoteDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
+        var id = $"contract:{e.ContractId}";
+        var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<ContractReadModel>
+            .Update.Set(x => x.QuoteId, e.QuoteId)
+            .Set(x => x.StartDate, ToUtcDate(e.StartDate))
+            .Set(x => x.EndDate, e.EndDate is null ? null : ToUtcDate(e.EndDate.Value))
             .Set(x => x.Status, "Active");
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);

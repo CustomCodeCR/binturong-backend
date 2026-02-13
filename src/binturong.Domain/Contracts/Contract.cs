@@ -135,6 +135,8 @@ public sealed class Contract : Entity
     {
         ExpiryAlertActive = true;
         ExpiryLastNotifiedAtUtc = nowUtc;
+
+        Raise(new ContractExpiryNoticeSentDomainEvent(Id, EndDate, ExpiryNoticeDays, nowUtc));
     }
 
     public void ClearExpiryAlert()

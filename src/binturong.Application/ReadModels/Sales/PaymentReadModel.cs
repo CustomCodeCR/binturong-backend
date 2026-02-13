@@ -3,12 +3,12 @@ namespace Application.ReadModels.Sales;
 public sealed class PaymentReadModel
 {
     public string Id { get; init; } = default!; // "payment:{PaymentId}"
-    public int PaymentId { get; init; }
+    public Guid PaymentId { get; init; }
 
-    public int ClientId { get; init; }
+    public Guid ClientId { get; init; }
     public string ClientName { get; init; } = default!;
 
-    public int PaymentMethodId { get; init; }
+    public Guid PaymentMethodId { get; init; }
     public string PaymentMethodCode { get; init; } = default!;
     public string PaymentMethodDescription { get; init; } = default!;
 
@@ -23,7 +23,7 @@ public sealed class PaymentReadModel
 
 public sealed class PaymentAppliedInvoiceReadModel
 {
-    public int InvoiceId { get; init; }
+    public Guid InvoiceId { get; init; }
     public string? InvoiceConsecutive { get; init; }
     public decimal AppliedAmount { get; init; }
 }

@@ -2,6 +2,7 @@ using Api.Security;
 using Application.Abstractions.Messaging;
 using Application.Features.Contracts.Attachments.Delete;
 using Application.Features.Contracts.Attachments.Upload;
+using Application.Features.Contracts.ConvertFromQuote;
 using Application.Features.Contracts.Create;
 using Application.Features.Contracts.Delete;
 using Application.Features.Contracts.GetContractById;
@@ -21,9 +22,6 @@ public sealed class ContractsEndpoints : IEndpoint
     {
         var group = app.MapGroup("/api/contracts").WithTags("Contracts");
 
-        // =========================
-        // GET /api/contracts
-        // =========================
         group
             .MapGet(
                 "/",
@@ -47,9 +45,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsRead);
 
-        // =========================
-        // GET /api/contracts/{id}
-        // =========================
         group
             .MapGet(
                 "/{id:guid}",
@@ -67,9 +62,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsRead);
 
-        // =========================
-        // POST /api/contracts
-        // =========================
         group
             .MapPost(
                 "/",
@@ -110,9 +102,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsCreate);
 
-        // =========================
-        // PUT /api/contracts/{id}
-        // =========================
         group
             .MapPut(
                 "/{id:guid}",
@@ -146,9 +135,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsUpdate);
 
-        // =========================
-        // DELETE /api/contracts/{id}
-        // =========================
         group
             .MapDelete(
                 "/{id:guid}",
@@ -166,11 +152,41 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsDelete);
 
-        // ============================================================
-        // Milestones
-        // ============================================================
+        group
+            .MapPost(
+                "/convert-from-quote/{quoteId:guid}",
+                async (
+                    Guid quoteId,
+                    ConvertQuoteToContractRequest req,
+                    ICommandHandler<ConvertQuoteToContractCommand, Guid> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new ConvertQuoteToContractCommand(
+                            quoteId,
+                            req.StartDate,
+                            req.EndDate,
+                            req.ResponsibleUserId,
+                            req.Description,
+                            req.Notes,
+                            req.AutoRenewEnabled,
+                            req.AutoRenewEveryDays,
+                            req.ExpiryNoticeDays
+                        ),
+                        ct
+                    );
 
-        // POST /api/contracts/{id}/milestones
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Created(
+                            $"/api/contracts/{result.Value}",
+                            new { contractId = result.Value }
+                        );
+                }
+            )
+            .RequireScope(SecurityScopes.ContractsConvertFromQuote);
+
         group
             .MapPost(
                 "/{id:guid}/milestones",
@@ -202,7 +218,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsMilestonesManage);
 
-        // PUT /api/contracts/{id}/milestones/{milestoneId}
         group
             .MapPut(
                 "/{id:guid}/milestones/{milestoneId:guid}",
@@ -235,7 +250,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsMilestonesManage);
 
-        // DELETE /api/contracts/{id}/milestones/{milestoneId}
         group
             .MapDelete(
                 "/{id:guid}/milestones/{milestoneId:guid}",
@@ -250,7 +264,6 @@ public sealed class ContractsEndpoints : IEndpoint
                         new RemoveContractMilestoneCommand(id, milestoneId),
                         ct
                     );
-
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -258,12 +271,6 @@ public sealed class ContractsEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.ContractsMilestonesManage);
 
-        // ============================================================
-        // Attachments (S3) - upload/delete
-        // ============================================================
-
-        // POST /api/contracts/{id}/attachments
-        // multipart/form-data field name: "file"
         group
             .MapPost(
                 "/{id:guid}/attachments",
@@ -306,7 +313,6 @@ public sealed class ContractsEndpoints : IEndpoint
             .DisableAntiforgery()
             .RequireScope(SecurityScopes.ContractsAttachmentsUpload);
 
-        // DELETE /api/contracts/{id}/attachments/{attachmentId}
         group
             .MapDelete(
                 "/{id:guid}/attachments/{attachmentId:guid}",
@@ -321,7 +327,6 @@ public sealed class ContractsEndpoints : IEndpoint
                         new DeleteContractAttachmentCommand(id, attachmentId),
                         ct
                     );
-
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();

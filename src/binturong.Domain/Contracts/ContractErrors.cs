@@ -61,4 +61,42 @@ public static class ContractErrors
         "Contracts.Attachments.TooLarge",
         "File is too large."
     );
+
+    public static readonly Error QuoteRequired = Error.Validation(
+        "Contracts.QuoteRequired",
+        "QuoteId is required."
+    );
+
+    public static Error QuoteNotFound(Guid id) =>
+        Error.NotFound("Quotes.NotFound", $"Quote '{id}' not found.");
+
+    public static readonly Error QuoteNotAccepted = Error.Validation(
+        "Contracts.QuoteNotAccepted",
+        "Quote must be in status 'Accepted'."
+    );
+
+    public static readonly Error ContractAlreadyExistsForQuote = Error.Conflict(
+        "Contracts.AlreadyExistsForQuote",
+        "A contract already exists for this quote."
+    );
+
+    public static readonly Error ResponsibleRequired = Error.Validation(
+        "Contracts.ResponsibleRequired",
+        "ResponsibleUserId is required."
+    );
+
+    public static readonly Error AutoRenewEveryDaysInvalid = Error.Validation(
+        "Contracts.AutoRenewEveryDaysInvalid",
+        "AutoRenewEveryDays must be >= 1."
+    );
+
+    public static readonly Error ExpiryNoticeDaysInvalid = Error.Validation(
+        "Contracts.ExpiryNoticeDaysInvalid",
+        "ExpiryNoticeDays must be >= 0."
+    );
+
+    public static readonly Error ResponsibleUserRequired = Error.Validation(
+        "Contracts.ResponsibleUserRequired",
+        "ResponsibleUserId is required."
+    );
 }

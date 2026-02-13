@@ -11,4 +11,6 @@ public static partial class SecurityScopes
 
     public const string ContractsAttachmentsUpload = "contracts.attachments.upload";
     public const string ContractsAttachmentsDelete = "contracts.attachments.delete";
+
+    public const string ContractsConvertFromQuote = "contracts.convert_from_quote";
 }

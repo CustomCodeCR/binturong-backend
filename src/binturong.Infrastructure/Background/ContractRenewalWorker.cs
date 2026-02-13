@@ -72,6 +72,7 @@ public sealed class ContractRenewalWorker : BackgroundService
 
                 var to =
                     _emailOptions.ContractsEmail ?? _emailOptions.AdminEmail ?? "contracts@local";
+
                 await jobs.EnqueueAsync(
                     async (sp, token) =>
                     {
@@ -113,6 +114,7 @@ public sealed class ContractRenewalWorker : BackgroundService
 
                 var to =
                     _emailOptions.ContractsEmail ?? _emailOptions.AdminEmail ?? "contracts@local";
+
                 await jobs.EnqueueAsync(
                     async (sp, token) =>
                     {
