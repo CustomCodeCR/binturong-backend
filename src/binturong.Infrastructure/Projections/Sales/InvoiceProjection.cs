@@ -15,7 +15,9 @@ internal sealed class InvoiceProjection
         IProjector<InvoiceContingencyActivatedDomainEvent>,
         IProjector<InvoicePaymentAppliedDomainEvent>,
         IProjector<InvoicePaidDomainEvent>,
-        IProjector<InvoiceCreatedFromQuoteDomainEvent>
+        IProjector<InvoiceCreatedFromQuoteDomainEvent>,
+        IProjector<InvoicePaymentVerificationSetDomainEvent>,
+        IProjector<InvoicePaymentVerificationClearedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -150,6 +152,34 @@ internal sealed class InvoiceProjection
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
             .Set(x => x.Total, e.Total);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(InvoicePaymentVerificationSetDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>.Update.Set(
+            x => x.InternalStatus,
+            "PaymentVerification"
+        );
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(
+        InvoicePaymentVerificationClearedDomainEvent e,
+        CancellationToken ct
+    )
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>.Update.Set(x => x.InternalStatus, "Pending");
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }

@@ -18,3 +18,6 @@ public sealed record PaymentAppliedToInvoiceDomainEvent(
     decimal AppliedAmount,
     DateTime AtUtc
 ) : IDomainEvent;
+
+public sealed record PaymentPosRejectedDomainEvent(Guid PaymentId, string Message, DateTime AtUtc)
+    : IDomainEvent;

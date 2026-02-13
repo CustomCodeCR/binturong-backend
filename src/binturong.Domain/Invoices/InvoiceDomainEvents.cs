@@ -110,3 +110,13 @@ public sealed record InvoiceCreatedFromQuoteDomainEvent(
     Guid ClientId,
     DateTime CreatedAtUtc
 ) : IDomainEvent;
+
+public sealed record InvoicePaymentVerificationSetDomainEvent(
+    Guid InvoiceId,
+    string Reason, // "BankTransferPending"
+    DateTime AtUtc
+) : IDomainEvent;
+
+// Verificación completada (opcional, si luego quieres pasar de Verification -> Paid/Pending)
+public sealed record InvoicePaymentVerificationClearedDomainEvent(Guid InvoiceId, DateTime AtUtc)
+    : IDomainEvent;

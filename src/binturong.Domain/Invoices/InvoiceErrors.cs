@@ -44,4 +44,25 @@ public static class InvoiceErrors
         "Invoices.Amount.Invalid",
         "Amount must be greater than zero."
     );
+
+    public static Error NotEmitted(Guid invoiceId) =>
+        Error.Validation("Invoices.NotEmitted", $"Invoice '{invoiceId}' is not emitted.");
+
+    public static Error AlreadyPaid(Guid invoiceId) =>
+        Error.Validation("Invoices.AlreadyPaid", $"Invoice '{invoiceId}' is already paid.");
+
+    public static Error PaymentAmountInvalid =>
+        Error.Validation("Invoices.PaymentAmountInvalid", "Payment amount must be greater than 0.");
+
+    public static Error PaymentExceedsPending =>
+        Error.Validation(
+            "Invoices.PaymentExceedsPending",
+            "Payment exceeds the pending balance for the invoice."
+        );
+
+    public static Error PaymentInsufficientToSettle =>
+        Error.Validation(
+            "Invoices.PaymentInsufficientToSettle",
+            "Payment is insufficient to settle the invoice."
+        );
 }

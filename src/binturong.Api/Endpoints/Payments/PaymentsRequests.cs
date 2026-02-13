@@ -1,13 +1,43 @@
 namespace Api.Endpoints.Payments;
 
-public sealed record RegisterPaymentAppliedInvoiceRequest(Guid InvoiceId, decimal AppliedAmount);
-
-public sealed record RegisterPaymentRequest(
+public sealed record RegisterCashPaymentRequest(
+    Guid InvoiceId,
     Guid ClientId,
     Guid PaymentMethodId,
     DateTime PaymentDate,
-    decimal TotalAmount,
+    decimal AmountTendered,
+    string? Notes
+);
+
+public sealed record RegisterTransferPaymentRequest(
+    Guid InvoiceId,
+    Guid ClientId,
+    Guid PaymentMethodId,
+    DateTime PaymentDate,
+    decimal Amount,
+    string Reference,
+    bool IsBankConfirmed,
+    string? Notes
+);
+
+public sealed record RegisterCardPaymentRequest(
+    Guid InvoiceId,
+    Guid ClientId,
+    Guid PaymentMethodId,
+    DateTime PaymentDate,
+    decimal Amount,
+    bool IsPosAvailable,
+    bool IsApproved,
+    string? PosAuthCode,
+    string? Notes
+);
+
+public sealed record RegisterPartialPaymentRequest(
+    Guid InvoiceId,
+    Guid ClientId,
+    Guid PaymentMethodId,
+    DateTime PaymentDate,
+    decimal Amount,
     string? Reference,
-    string? Notes,
-    IReadOnlyList<RegisterPaymentAppliedInvoiceRequest> AppliedInvoices
+    string? Notes
 );

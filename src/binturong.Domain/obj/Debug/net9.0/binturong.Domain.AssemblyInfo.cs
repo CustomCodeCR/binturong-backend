@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("binturong.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+442692cf16d1af52a78b1d1982d75a09f742cce2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+89fc5b96e2c00537e7b6f19025ef16d3ae82dc69")]
 [assembly: System.Reflection.AssemblyProductAttribute("binturong.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("binturong.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

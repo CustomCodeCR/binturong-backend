@@ -4,6 +4,7 @@ using Application.Abstractions.Web;
 using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.Sales;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SharedKernel;
 
@@ -12,19 +13,19 @@ namespace Application.Features.Payments.GetPayments;
 internal sealed class GetPaymentsQueryHandler
     : IQueryHandler<GetPaymentsQuery, IReadOnlyList<PaymentReadModel>>
 {
-    private readonly IMongoDatabase _mongo;
+    private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
     private readonly IRequestContext _request;
     private readonly ICurrentUser _currentUser;
 
     public GetPaymentsQueryHandler(
-        IMongoDatabase mongo,
+        IMongoDatabase db,
         ICommandBus bus,
         IRequestContext request,
         ICurrentUser currentUser
     )
     {
-        _mongo = mongo;
+        _db = db;
         _bus = bus;
         _request = request;
         _currentUser = currentUser;
@@ -35,34 +36,17 @@ internal sealed class GetPaymentsQueryHandler
         CancellationToken ct
     )
     {
-        var col = _mongo.GetCollection<PaymentReadModel>(MongoCollections.Payments);
+        var col = _db.GetCollection<PaymentReadModel>(MongoCollections.Payments);
 
-        var filter = Builders<PaymentReadModel>.Filter.Empty;
-        if (!string.IsNullOrWhiteSpace(q.Search))
-        {
-            var s = q.Search.Trim();
-            filter = Builders<PaymentReadModel>.Filter.Or(
-                Builders<PaymentReadModel>.Filter.Regex(
-                    x => x.ClientName,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
-                ),
-                Builders<PaymentReadModel>.Filter.Regex(
-                    x => x.Reference,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
-                ),
-                Builders<PaymentReadModel>.Filter.Regex(
-                    x => x.PaymentMethodCode,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
-                )
-            );
-        }
+        var filter = BuildFilter(q);
 
-        var skip = Math.Max(0, (q.Page - 1) * q.PageSize);
+        var page = q.Page <= 0 ? 1 : q.Page;
+        var pageSize = q.PageSize <= 0 ? 50 : q.PageSize;
 
         var docs = await col.Find(filter)
             .SortByDescending(x => x.PaymentDate)
-            .Skip(skip)
-            .Limit(Math.Clamp(q.PageSize, 1, 200))
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
             .ToListAsync(ct);
 
         await _bus.AuditAsync(
@@ -70,14 +54,39 @@ internal sealed class GetPaymentsQueryHandler
             "Payments",
             "Payment",
             null,
-            "PAYMENTS_LIST",
+            "PAYMENTS_LIST_READ",
             string.Empty,
-            $"page={q.Page}; pageSize={q.PageSize}; search={(q.Search ?? "")}; count={docs.Count}",
+            $"search={q.Search}; paymentMethodId={q.PaymentMethodId}; page={page}; pageSize={pageSize}; count={docs.Count}",
             _request.IpAddress,
             _request.UserAgent,
             ct
         );
 
         return Result.Success<IReadOnlyList<PaymentReadModel>>(docs);
+    }
+
+    private static FilterDefinition<PaymentReadModel> BuildFilter(GetPaymentsQuery q)
+    {
+        var builder = Builders<PaymentReadModel>.Filter;
+        var filters = new List<FilterDefinition<PaymentReadModel>>();
+
+        if (!string.IsNullOrWhiteSpace(q.Search))
+        {
+            var s = q.Search.Trim();
+
+            var searchFilter = builder.Or(
+                builder.Regex(x => x.Reference, new BsonRegularExpression(s, "i")),
+                builder.Regex(x => x.Notes, new BsonRegularExpression(s, "i")),
+                builder.Regex(x => x.ClientName, new BsonRegularExpression(s, "i")),
+                builder.Regex(x => x.PaymentMethodCode, new BsonRegularExpression(s, "i"))
+            );
+
+            filters.Add(searchFilter);
+        }
+
+        if (q.PaymentMethodId.HasValue && q.PaymentMethodId.Value != Guid.Empty)
+            filters.Add(builder.Eq(x => x.PaymentMethodId, q.PaymentMethodId.Value));
+
+        return filters.Count == 0 ? builder.Empty : builder.And(filters);
     }
 }

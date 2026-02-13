@@ -9,7 +9,8 @@ namespace Infrastructure.Projections.Sales;
 internal sealed class PaymentProjection
     : IProjector<PaymentCreatedDomainEvent>,
         IProjector<PaymentDeletedDomainEvent>,
-        IProjector<PaymentAppliedToInvoiceDomainEvent>
+        IProjector<PaymentAppliedToInvoiceDomainEvent>,
+        IProjector<PaymentPosRejectedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -66,5 +67,18 @@ internal sealed class PaymentProjection
         );
 
         await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(PaymentPosRejectedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<PaymentReadModel>(MongoCollections.Payments);
+
+        var id = $"payment:{e.PaymentId}";
+        var filter = Builders<PaymentReadModel>.Filter.Eq(x => x.Id, id);
+
+        // opcional: guardar en Notes si quieres reflejarlo (tu RM ya tiene Notes)
+        var update = Builders<PaymentReadModel>.Update.Set(x => x.Notes, e.Message);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 }

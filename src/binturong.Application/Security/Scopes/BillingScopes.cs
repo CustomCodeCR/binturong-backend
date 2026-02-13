@@ -13,6 +13,8 @@ public static partial class SecurityScopes
     public const string PaymentsRead = "payments.read";
     public const string PaymentsCreate = "payments.create";
     public const string PaymentsDelete = "payments.delete";
+    public const string PaymentsExport = "payments.export";
+    public const string PaymentsRegister = "payments.register";
 
     // Credit Notes
     public const string CreditNotesRead = "credit_notes.read";
@@ -27,4 +29,6 @@ public static partial class SecurityScopes
     public const string DebitNotesEmit = "debit_notes.emit";
 
     public const string InvoicesConvertFromQuote = "invoices.convert_from_quote";
+
+    public const string AccountsReceivableRead = "accounts_receivable.read";
 }

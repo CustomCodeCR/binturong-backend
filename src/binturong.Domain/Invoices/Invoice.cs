@@ -172,4 +172,46 @@ public sealed class Invoice : Entity
             InternalStatus = "Pending";
         }
     }
+
+    // FAC-03 + PAG-02 escenario 3
+    public Result SetPaymentInVerification(string reason, DateTime nowUtc)
+    {
+        if (TaxStatus != "Emitted")
+            return Result.Failure(InvoiceErrors.NotEmitted(Id));
+
+        // Si ya está pagada, no tiene sentido
+        if (InternalStatus == "Paid")
+            return Result.Failure(InvoiceErrors.AlreadyPaid(Id));
+
+        InternalStatus = "PaymentVerification";
+        Raise(new InvoicePaymentVerificationSetDomainEvent(Id, reason, nowUtc));
+        return Result.Success();
+    }
+
+    public void ClearPaymentVerification(DateTime nowUtc)
+    {
+        if (InternalStatus == "PaymentVerification")
+        {
+            InternalStatus = "Pending";
+            Raise(new InvoicePaymentVerificationClearedDomainEvent(Id, nowUtc));
+        }
+    }
+
+    // PAG-04 validación (no permitir exceder saldo)
+    public Result ValidateApplyPaymentAmount(decimal amount)
+    {
+        if (amount <= 0)
+            return Result.Failure(InvoiceErrors.PaymentAmountInvalid);
+
+        var paid = PaymentDetails.Sum(x => x.AppliedAmount);
+        var pending = Math.Max(0, Total - paid);
+
+        if (pending <= 0)
+            return Result.Failure(InvoiceErrors.AlreadyPaid(Id));
+
+        if (amount > pending)
+            return Result.Failure(InvoiceErrors.PaymentExceedsPending);
+
+        return Result.Success();
+    }
 }

@@ -451,6 +451,8 @@ public static class ScopeRegistry
         new ScopeDefinition("payments.read", "View payments", Roles.Admin, Roles.Manager),
         new ScopeDefinition("payments.create", "Register payments", Roles.Admin, Roles.Manager),
         new ScopeDefinition("payments.delete", "Delete payments", Roles.Admin),
+        new ScopeDefinition("payments.register", "Register payments", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("payments.export", "Export payments", Roles.Admin),
         // =========================
         // Credit Notes
         // =========================
@@ -473,6 +475,12 @@ public static class ScopeRegistry
         new ScopeDefinition(
             "invoices.convert_from_quote",
             "Convert accepted quote to invoice",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounts_receivable.read",
+            "View accounts receivable status",
             Roles.Admin,
             Roles.Manager
         ),
