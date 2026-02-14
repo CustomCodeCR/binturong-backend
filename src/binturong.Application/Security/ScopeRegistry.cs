@@ -484,6 +484,18 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        // =========================
+        // Payments Methods
+        // =========================
+        new ScopeDefinition(
+            "payment_methods.read",
+            "View payment methods",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("payment_methods.create", "Create payment methods", Roles.Admin),
+        new ScopeDefinition("payment_methods.update", "Update payment methods", Roles.Admin),
+        new ScopeDefinition("payment_methods.delete", "Delete payment methods", Roles.Admin),
     };
 
     public static class Roles
