@@ -10,3 +10,15 @@
 /home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/obj/Debug/net9.0/refint/binturong.SharedKernel.dll
 /home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.pdb
 /home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/obj/Debug/net9.0/ref/binturong.SharedKernel.dll
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/bin/Debug/net9.0/binturong.SharedKernel.deps.json
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/bin/Debug/net9.0/binturong.SharedKernel.dll
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/bin/Debug/net9.0/binturong.SharedKernel.pdb
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.GeneratedMSBuildEditorConfig.editorconfig
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.AssemblyInfoInputs.cache
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.AssemblyInfo.cs
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.csproj.CoreCompileInputs.cache
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.sourcelink.json
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.dll
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/refint/binturong.SharedKernel.dll
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/binturong.SharedKernel.pdb
+/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/Debug/net9.0/ref/binturong.SharedKernel.dll

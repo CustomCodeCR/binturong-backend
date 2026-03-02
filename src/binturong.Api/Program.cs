@@ -34,6 +34,14 @@ using (var scope = app.Services.CreateScope())
         .SeedAsync();
 }
 
+app.UseCors(policy =>
+    policy
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .SetIsOriginAllowed(_ => true)
+        .AllowCredentials()
+);
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

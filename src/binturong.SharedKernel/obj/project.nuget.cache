@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "UzKMMdk6mz4=",
+  "dgSpecHash": "Fe0dS9Um02I=",
   "success": true,
-  "projectFilePath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
+  "expectedPackageFiles": [
+    "/Users/diegoaraya/.nuget/packages/microsoft.netcore.app.ref/9.0.13/microsoft.netcore.app.ref.9.0.13.nupkg.sha512",
+    "/Users/diegoaraya/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.13/microsoft.aspnetcore.app.ref.9.0.13.nupkg.sha512"
+  ],
   "logs": []
 }

@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {}
+    "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {}
   },
   "projects": {
-    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj": {
+    "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/binturong.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj",
+        "projectUniqueName": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/binturong.Application.csproj",
         "projectName": "binturong.Application",
-        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj",
-        "packagesPath": "/home/maurice/.nuget/packages/",
-        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/obj/",
+        "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/binturong.Application.csproj",
+        "packagesPath": "/Users/diegoaraya/.nuget/packages/",
+        "outputPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maurice/.nuget/NuGet/NuGet.Config"
+          "/Users/diegoaraya/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -26,11 +26,11 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj"
               },
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
               }
             }
           }
@@ -45,7 +45,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -87,26 +87,36 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
+    "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj",
+        "projectUniqueName": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj",
         "projectName": "binturong.Domain",
-        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj",
-        "packagesPath": "/home/maurice/.nuget/packages/",
-        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/obj/",
+        "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj",
+        "packagesPath": "/Users/diegoaraya/.nuget/packages/",
+        "outputPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maurice/.nuget/NuGet/NuGet.Config"
+          "/Users/diegoaraya/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -118,8 +128,8 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
               }
             }
           }
@@ -134,7 +144,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -150,26 +160,36 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {
+    "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj",
+        "projectUniqueName": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj",
         "projectName": "binturong.Infrastructure",
-        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj",
-        "packagesPath": "/home/maurice/.nuget/packages/",
-        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Infrastructure/obj/",
+        "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Infrastructure/binturong.Infrastructure.csproj",
+        "packagesPath": "/Users/diegoaraya/.nuget/packages/",
+        "outputPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maurice/.nuget/NuGet/NuGet.Config"
+          "/Users/diegoaraya/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -181,14 +201,14 @@
           "net9.0": {
             "targetAlias": "net9.0",
             "projectReferences": {
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Application/binturong.Application.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/binturong.Application.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Application/binturong.Application.csproj"
               },
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.Domain/binturong.Domain.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.Domain/binturong.Domain.csproj"
               },
-              "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
-                "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
+              "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+                "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj"
               }
             }
           }
@@ -203,7 +223,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -305,26 +325,36 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
+    "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
+        "projectUniqueName": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
         "projectName": "binturong.SharedKernel",
-        "projectPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
-        "packagesPath": "/home/maurice/.nuget/packages/",
-        "outputPath": "/home/maurice/Universidad/proyecto-final/backend/src/binturong.SharedKernel/obj/",
+        "projectPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/binturong.SharedKernel.csproj",
+        "packagesPath": "/Users/diegoaraya/.nuget/packages/",
+        "outputPath": "/Users/diegoaraya/GIT/binturong-backend/src/binturong.SharedKernel/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maurice/.nuget/NuGet/NuGet.Config"
+          "/Users/diegoaraya/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
@@ -348,7 +378,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net9.0": {
@@ -364,12 +394,22 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/maurice/.local/share/mise/installs/dotnet/9.0.306/sdk/9.0.306/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
