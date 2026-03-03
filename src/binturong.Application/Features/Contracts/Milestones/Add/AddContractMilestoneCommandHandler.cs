@@ -16,14 +16,8 @@ internal sealed class AddContractMilestoneCommandHandler
 
     public async Task<Result<Guid>> Handle(AddContractMilestoneCommand cmd, CancellationToken ct)
     {
-        var contract = await _db
-            .Contracts.Include(x => x.BillingMilestones)
-            .FirstOrDefaultAsync(x => x.Id == cmd.ContractId, ct);
-
-        if (contract is null)
-            return Result.Failure<Guid>(ContractErrors.NotFound(cmd.ContractId));
-
-        var desc = cmd.Description?.Trim() ?? string.Empty;
+        // 1) Validate input
+        var desc = (cmd.Description ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(desc))
             return Result.Failure<Guid>(ContractErrors.MilestoneDescriptionRequired);
 
@@ -33,10 +27,31 @@ internal sealed class AddContractMilestoneCommandHandler
         if (cmd.Amount < 0)
             return Result.Failure<Guid>(ContractErrors.MilestoneAmountInvalid);
 
+        // 2) Ensure contract exists (NO Include, NO tracking changes needed)
+        var contractExists = await _db.Contracts.AnyAsync(x => x.Id == cmd.ContractId, ct);
+
+        if (!contractExists)
+            return Result.Failure<Guid>(ContractErrors.NotFound(cmd.ContractId));
+
+        // 3) Optional duplicate check in DB (safe under concurrency)
+        var duplicate = await _db.ContractBillingMilestones.AnyAsync(
+            x =>
+                x.ContractId == cmd.ContractId
+                && x.Description == desc
+                && x.Percentage == cmd.Percentage
+                && x.Amount == cmd.Amount
+                && x.ScheduledDate == cmd.ScheduledDate,
+            ct
+        );
+
+        if (duplicate)
+            return Result.Failure<Guid>(ContractErrors.MilestoneDuplicate);
+
+        // 4) Insert milestone directly
         var m = new ContractBillingMilestone
         {
             Id = Guid.NewGuid(),
-            ContractId = contract.Id,
+            ContractId = cmd.ContractId,
             Description = desc,
             Percentage = cmd.Percentage,
             Amount = cmd.Amount,
@@ -45,9 +60,11 @@ internal sealed class AddContractMilestoneCommandHandler
             InvoiceId = null,
         };
 
-        contract.AddMilestone(m);
+        _db.ContractBillingMilestones.Add(m);
 
+        // 5) Save
         await _db.SaveChangesAsync(ct);
+
         return m.Id;
     }
 }

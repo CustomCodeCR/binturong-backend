@@ -158,8 +158,12 @@ internal sealed class ContractProjection
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
         var update = Builders<ContractReadModel>
-            .Update.SetOnInsert(x => x.Id, id)
-            .SetOnInsert(x => x.ContractId, contractId)
+            .Update
+            // Only these should be OnInsert
+            .SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            // ALWAYS set these (fix for missing ContractId / SalesOrderId)
+            .Set(x => x.ContractId, contractId)
             .Set(x => x.Code, code)
             .Set(x => x.ClientId, clientId)
             .Set(x => x.ClientName, string.Empty)
@@ -191,13 +195,14 @@ internal sealed class ContractProjection
         var id = $"contract:{contractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
+        // idempotent: remove existing
         var pull = Builders<ContractReadModel>.Update.PullFilter(
             x => x.Milestones,
             m => m.MilestoneId == milestoneId
         );
         await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
 
-        var line = new ContractMilestoneReadModel
+        var milestone = new ContractMilestoneReadModel
         {
             MilestoneId = milestoneId,
             Description = description,
@@ -208,10 +213,10 @@ internal sealed class ContractProjection
             InvoiceId = invoiceId,
         };
 
-        var push = Builders<ContractReadModel>.Update.Push(x => x.Milestones, line);
+        var push = Builders<ContractReadModel>.Update.Push(x => x.Milestones, milestone);
         await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private static DateTime ToUtcDate(DateOnly d) =>
-        new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+        new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
 }

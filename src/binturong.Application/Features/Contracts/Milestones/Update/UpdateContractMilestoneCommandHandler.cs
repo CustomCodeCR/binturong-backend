@@ -15,23 +15,7 @@ internal sealed class UpdateContractMilestoneCommandHandler
 
     public async Task<Result> Handle(UpdateContractMilestoneCommand cmd, CancellationToken ct)
     {
-        var contract = await _db
-            .Contracts.Include(x => x.BillingMilestones)
-            .FirstOrDefaultAsync(x => x.Id == cmd.ContractId, ct);
-
-        if (contract is null)
-            return Result.Failure(ContractErrors.NotFound(cmd.ContractId));
-
-        var m = contract.BillingMilestones.FirstOrDefault(x => x.Id == cmd.MilestoneId);
-        if (m is null)
-            return Result.Failure(
-                Error.NotFound(
-                    "Contracts.Milestones.NotFound",
-                    $"Milestone '{cmd.MilestoneId}' not found."
-                )
-            );
-
-        var desc = cmd.Description?.Trim() ?? string.Empty;
+        var desc = (cmd.Description ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(desc))
             return Result.Failure(ContractErrors.MilestoneDescriptionRequired);
 
@@ -41,16 +25,43 @@ internal sealed class UpdateContractMilestoneCommandHandler
         if (cmd.Amount < 0)
             return Result.Failure(ContractErrors.MilestoneAmountInvalid);
 
-        m.Description = desc;
-        m.Percentage = cmd.Percentage;
-        m.Amount = cmd.Amount;
-        m.ScheduledDate = cmd.ScheduledDate;
-        m.IsBilled = cmd.IsBilled;
-        m.InvoiceId = cmd.InvoiceId;
+        // Ensure contract exists (fast, avoids loading aggregate + concurrency token issues)
+        var contractExists = await _db.Contracts.AnyAsync(x => x.Id == cmd.ContractId, ct);
 
-        contract.UpdateMilestone(m);
+        if (!contractExists)
+            return Result.Failure(ContractErrors.NotFound(cmd.ContractId));
 
-        await _db.SaveChangesAsync(ct);
-        return Result.Success();
+        // Load milestone directly from DbSet (single row tracking)
+        var milestone = await _db.ContractBillingMilestones.FirstOrDefaultAsync(
+            x => x.Id == cmd.MilestoneId && x.ContractId == cmd.ContractId,
+            ct
+        );
+
+        if (milestone is null)
+            return Result.Failure(
+                Error.NotFound(
+                    "Contracts.Milestones.NotFound",
+                    $"Milestone '{cmd.MilestoneId}' not found."
+                )
+            );
+
+        // Apply changes
+        milestone.Description = desc;
+        milestone.Percentage = cmd.Percentage;
+        milestone.Amount = cmd.Amount;
+        milestone.ScheduledDate = cmd.ScheduledDate;
+        milestone.IsBilled = cmd.IsBilled;
+        milestone.InvoiceId = cmd.InvoiceId;
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // If you have ContractErrors.ConcurrencyConflict, reuse it:
+            return Result.Failure(ContractErrors.ConcurrencyConflict);
+        }
     }
 }

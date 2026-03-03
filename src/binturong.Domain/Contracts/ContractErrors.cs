@@ -99,4 +99,16 @@ public static class ContractErrors
         "Contracts.ResponsibleUserRequired",
         "ResponsibleUserId is required."
     );
+
+    public static Error ConcurrencyConflict =>
+        Error.Conflict(
+            "contracts.concurrency_conflict",
+            "The contract was modified by another operation. Please retry."
+        );
+
+    public static Error MilestoneDuplicate =>
+        Error.Conflict(
+            "contracts.milestone_duplicate",
+            "A milestone with the same data already exists."
+        );
 }

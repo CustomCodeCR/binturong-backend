@@ -15,15 +15,19 @@ internal sealed class RemoveContractMilestoneCommandHandler
 
     public async Task<Result> Handle(RemoveContractMilestoneCommand cmd, CancellationToken ct)
     {
-        var contract = await _db
-            .Contracts.Include(x => x.BillingMilestones)
-            .FirstOrDefaultAsync(x => x.Id == cmd.ContractId, ct);
+        // Ensure contract exists (fast, avoids loading aggregate and its concurrency token)
+        var contractExists = await _db.Contracts.AnyAsync(x => x.Id == cmd.ContractId, ct);
 
-        if (contract is null)
+        if (!contractExists)
             return Result.Failure(ContractErrors.NotFound(cmd.ContractId));
 
-        var exists = contract.BillingMilestones.Any(x => x.Id == cmd.MilestoneId);
-        if (!exists)
+        // Load milestone directly
+        var milestone = await _db.ContractBillingMilestones.FirstOrDefaultAsync(
+            x => x.Id == cmd.MilestoneId && x.ContractId == cmd.ContractId,
+            ct
+        );
+
+        if (milestone is null)
             return Result.Failure(
                 Error.NotFound(
                     "Contracts.Milestones.NotFound",
@@ -31,9 +35,17 @@ internal sealed class RemoveContractMilestoneCommandHandler
                 )
             );
 
-        contract.RemoveMilestone(cmd.MilestoneId);
+        _db.ContractBillingMilestones.Remove(milestone);
 
-        await _db.SaveChangesAsync(ct);
-        return Result.Success();
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // In case someone deleted it between load and delete
+            return Result.Failure(ContractErrors.ConcurrencyConflict);
+        }
     }
 }

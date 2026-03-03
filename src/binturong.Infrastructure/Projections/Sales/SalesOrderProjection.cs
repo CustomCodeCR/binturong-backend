@@ -37,7 +37,9 @@ internal sealed class SalesOrderProjection
 
         var update = Builders<SalesOrderReadModel>
             .Update.SetOnInsert(x => x.Id, id)
-            .SetOnInsert(x => x.SalesOrderId, e.SalesOrderId)
+            .SetOnInsert(x => x.Lines, new List<SalesOrderLineReadModel>())
+            // ALWAYS set SalesOrderId (fix)
+            .Set(x => x.SalesOrderId, e.SalesOrderId)
             .Set(x => x.Code, e.Code)
             .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.ClientId, e.ClientId)
