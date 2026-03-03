@@ -34,18 +34,22 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
         if (cmd.ClientId == Guid.Empty)
             return Result.Failure<Guid>(InvoiceErrors.ClientRequired);
 
-        if (cmd.Lines.Count == 0)
+        if (cmd.Lines is null || cmd.Lines.Count == 0)
             return Result.Failure<Guid>(InvoiceErrors.NoLines);
 
         var clientExists = await _db.Clients.AnyAsync(x => x.Id == cmd.ClientId, ct);
         if (!clientExists)
+        {
             return Result.Failure<Guid>(
                 Error.NotFound("Clients.NotFound", $"Client '{cmd.ClientId}' not found.")
             );
+        }
+
+        var invoiceId = Guid.NewGuid();
 
         var invoice = new Invoice
         {
-            Id = Guid.NewGuid(),
+            Id = invoiceId,
             ClientId = cmd.ClientId,
             BranchId = cmd.BranchId,
             SalesOrderId = cmd.SalesOrderId,
@@ -65,13 +69,15 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
 
         foreach (var l in cmd.Lines)
         {
+            var lineDesc = (l.Description ?? string.Empty).Trim();
+
             invoice.Details.Add(
                 new Domain.InvoiceDetails.InvoiceDetail
                 {
                     Id = Guid.NewGuid(),
-                    InvoiceId = invoice.Id,
+                    InvoiceId = invoiceId,
                     ProductId = l.ProductId,
-                    Description = l.Description,
+                    Description = lineDesc,
                     Quantity = l.Quantity,
                     UnitPrice = l.UnitPrice,
                     DiscountPerc = l.DiscountPerc,
@@ -81,6 +87,7 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
             );
         }
 
+        // IMPORTANT: this only works if InvoiceCreatedDomainEvent includes Lines (see event fix)
         invoice.RaiseCreated();
 
         _db.Invoices.Add(invoice);

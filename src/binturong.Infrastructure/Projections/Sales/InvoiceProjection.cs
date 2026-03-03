@@ -10,6 +10,7 @@ internal sealed class InvoiceProjection
     : IProjector<InvoiceCreatedDomainEvent>,
         IProjector<InvoiceUpdatedDomainEvent>,
         IProjector<InvoiceDeletedDomainEvent>,
+        IProjector<InvoiceEmissionRequestedDomainEvent>, // ✅ FIX
         IProjector<InvoiceEmittedDomainEvent>,
         IProjector<InvoiceEmissionRejectedDomainEvent>,
         IProjector<InvoiceContingencyActivatedDomainEvent>,
@@ -33,6 +34,20 @@ internal sealed class InvoiceProjection
     {
         var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
         await col.DeleteOneAsync(x => x.Id == $"invoice:{e.InvoiceId}", ct);
+    }
+
+    // ✅ FIX: avoid outbox crash + reflect processing state
+    public async Task ProjectAsync(InvoiceEmissionRequestedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.TaxStatus, "Processing")
+            .Set(x => x.InternalStatus, "Pending");
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     public async Task ProjectAsync(InvoiceEmittedDomainEvent e, CancellationToken ct)
@@ -106,9 +121,23 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
+        var lines = e
+            .Lines.Select(l => new InvoiceLineReadModel
+            {
+                InvoiceDetailId = l.InvoiceDetailId,
+                ProductId = l.ProductId,
+                Description = l.Description,
+                Quantity = l.Quantity,
+                UnitPrice = l.UnitPrice,
+                DiscountPerc = l.DiscountPerc,
+                TaxPerc = l.TaxPerc,
+                LineTotal = l.LineTotal,
+            })
+            .ToList();
+
         var update = Builders<InvoiceReadModel>
             .Update.SetOnInsert(x => x.Id, id)
-            .SetOnInsert(x => x.InvoiceId, e.InvoiceId)
+            .Set(x => x.InvoiceId, e.InvoiceId)
             .Set(x => x.ClientId, e.ClientId)
             .Set(x => x.ClientName, string.Empty)
             .Set(x => x.BranchId, e.BranchId)
@@ -127,7 +156,8 @@ internal sealed class InvoiceProjection
             .Set(x => x.InternalStatus, "Draft")
             .Set(x => x.EmailSent, false)
             .Set(x => x.PaidAmount, 0)
-            .Set(x => x.PendingAmount, e.Total);
+            .Set(x => x.PendingAmount, e.Total)
+            .Set(x => x.Lines, lines);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }

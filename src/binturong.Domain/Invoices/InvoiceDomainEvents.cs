@@ -16,8 +16,20 @@ public sealed record InvoiceCreatedDomainEvent(
     decimal Subtotal,
     decimal Taxes,
     decimal Discounts,
-    decimal Total
+    decimal Total,
+    IReadOnlyList<InvoiceCreatedLine> Lines
 ) : IDomainEvent;
+
+public sealed record InvoiceCreatedLine(
+    Guid InvoiceDetailId,
+    Guid ProductId,
+    string Description,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal DiscountPerc,
+    decimal TaxPerc,
+    decimal LineTotal
+);
 
 public sealed record InvoiceUpdatedDomainEvent(
     Guid InvoiceId,

@@ -71,7 +71,19 @@ public sealed class Invoice : Entity
                 Subtotal,
                 Taxes,
                 Discounts,
-                Total
+                Total,
+                Details
+                    .Select(d => new InvoiceCreatedLine(
+                        d.Id,
+                        d.ProductId,
+                        d.Description,
+                        d.Quantity,
+                        d.UnitPrice,
+                        d.DiscountPerc,
+                        d.TaxPerc,
+                        d.LineTotal
+                    ))
+                    .ToList()
             )
         );
 
@@ -144,7 +156,6 @@ public sealed class Invoice : Entity
     // Called by ElectronicInvoicingService
     public void RaiseEmitted(DateTime nowUtc)
     {
-        // IMPORTANT: service sets TaxStatus before calling; but we normalize here too
         if (string.IsNullOrWhiteSpace(TaxStatus))
             TaxStatus = "Emitted";
 
@@ -173,13 +184,11 @@ public sealed class Invoice : Entity
         }
     }
 
-    // FAC-03 + PAG-02 escenario 3
     public Result SetPaymentInVerification(string reason, DateTime nowUtc)
     {
         if (TaxStatus != "Emitted")
             return Result.Failure(InvoiceErrors.NotEmitted(Id));
 
-        // Si ya está pagada, no tiene sentido
         if (InternalStatus == "Paid")
             return Result.Failure(InvoiceErrors.AlreadyPaid(Id));
 
@@ -197,7 +206,6 @@ public sealed class Invoice : Entity
         }
     }
 
-    // PAG-04 validación (no permitir exceder saldo)
     public Result ValidateApplyPaymentAmount(decimal amount)
     {
         if (amount <= 0)
