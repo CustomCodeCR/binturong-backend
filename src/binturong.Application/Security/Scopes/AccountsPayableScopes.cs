@@ -4,4 +4,5 @@ public static partial class SecurityScopes
 {
     public const string AccountsPayableRead = "accounts_payable.read";
     public const string AccountsPayablePaymentsCreate = "accounts_payable.payments.create";
+    public const string AccountsPayableCreate = "accounts_payable.create";
 }

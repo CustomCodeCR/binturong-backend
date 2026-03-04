@@ -232,6 +232,12 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        new ScopeDefinition(
+            "accounts_payable.create",
+            "Create Accounts Payables",
+            Roles.Admin,
+            Roles.Manager
+        ),
         // =========================
         // Supplier Quotes
         // =========================

@@ -1,5 +1,6 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Features.Payables.AccountsPayable.CreateAccountsPayable;
 using Application.Features.Payables.AccountsPayable.GetAccountsPayableById;
 using Application.Features.Payables.AccountsPayable.GetAccountsPayables;
 using Application.Features.Payables.AccountsPayable.RegisterPayment;
@@ -85,5 +86,37 @@ public sealed class AccountsPayableEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.AccountsPayablePaymentsCreate);
+
+        group
+            .MapPost(
+                "/",
+                async (
+                    CreateAccountsPayableRequest req,
+                    ICommandHandler<CreateAccountsPayableCommand, Guid> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(
+                        new CreateAccountsPayableCommand(
+                            req.SupplierId,
+                            req.PurchaseOrderId,
+                            req.SupplierInvoiceId,
+                            req.DocumentDate,
+                            req.DueDate,
+                            req.TotalAmount,
+                            req.Currency
+                        ),
+                        ct
+                    );
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Created(
+                            $"/api/payables/accounts-payable/{result.Value}",
+                            new { accountPayableId = result.Value }
+                        );
+                }
+            )
+            .RequireScope(SecurityScopes.AccountsPayableCreate);
     }
 }
