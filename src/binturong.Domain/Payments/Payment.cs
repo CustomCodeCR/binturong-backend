@@ -17,18 +17,33 @@ public sealed class Payment : Entity
 
     public ICollection<Domain.PaymentDetails.PaymentDetail> Details { get; set; } =
         new List<Domain.PaymentDetails.PaymentDetail>();
+
     public ICollection<Domain.GatewayTransactions.GatewayTransaction> GatewayTransactions { get; set; } =
         new List<Domain.GatewayTransactions.GatewayTransaction>();
 
     public void RaiseCreated() =>
         Raise(
-            new PaymentCreatedDomainEvent(Id, ClientId, PaymentMethodId, PaymentDate, TotalAmount)
+            new PaymentCreatedDomainEvent(
+                Id,
+                ClientId,
+                PaymentMethodId,
+                PaymentDate,
+                TotalAmount,
+                Reference,
+                Notes
+            )
         );
 
     public void RaiseDeleted() => Raise(new PaymentDeletedDomainEvent(Id));
 
-    public void RaiseApplied(Guid invoiceId, decimal appliedAmount) =>
+    public void RaiseApplied(Guid invoiceId, string? invoiceConsecutive, decimal appliedAmount) =>
         Raise(
-            new PaymentAppliedToInvoiceDomainEvent(Id, invoiceId, appliedAmount, DateTime.UtcNow)
+            new PaymentAppliedToInvoiceDomainEvent(
+                Id,
+                invoiceId,
+                invoiceConsecutive,
+                appliedAmount,
+                DateTime.UtcNow
+            )
         );
 }

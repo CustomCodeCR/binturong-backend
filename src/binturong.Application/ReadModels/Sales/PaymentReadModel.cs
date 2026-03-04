@@ -18,7 +18,7 @@ public sealed class PaymentReadModel
     public string? Reference { get; init; }
     public string? Notes { get; init; }
 
-    public IReadOnlyList<PaymentAppliedInvoiceReadModel> AppliedInvoices { get; init; } = [];
+    public List<PaymentAppliedInvoiceReadModel> AppliedInvoices { get; init; } = new();
 }
 
 public sealed class PaymentAppliedInvoiceReadModel

@@ -74,6 +74,7 @@ internal sealed class RegisterPartialPaymentCommandHandler
             Notes = cmd.Notes ?? string.Empty,
         };
         payment.RaiseCreated();
+        payment.RaiseApplied(invoice.Id, invoice.Consecutive, cmd.Amount);
 
         var detail = new PaymentDetail
         {

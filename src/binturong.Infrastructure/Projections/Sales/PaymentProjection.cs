@@ -32,7 +32,9 @@ internal sealed class PaymentProjection
             .Set(x => x.PaymentMethodCode, string.Empty)
             .Set(x => x.PaymentMethodDescription, string.Empty)
             .Set(x => x.PaymentDate, e.PaymentDateUtc)
-            .Set(x => x.TotalAmount, e.TotalAmount);
+            .Set(x => x.TotalAmount, e.TotalAmount)
+            .Set(x => x.Reference, e.Reference)
+            .Set(x => x.Notes, e.Notes);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -50,23 +52,33 @@ internal sealed class PaymentProjection
         var id = $"payment:{e.PaymentId}";
         var filter = Builders<PaymentReadModel>.Filter.Eq(x => x.Id, id);
 
+        // 1) Ensure document exists (important if events arrive out of order)
+        var ensure = Builders<PaymentReadModel>
+            .Update.SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.PaymentId, e.PaymentId);
+
+        await col.UpdateOneAsync(filter, ensure, new UpdateOptions { IsUpsert = true }, ct);
+
+        // 2) Remove previous entry for this invoiceId
         var pull = Builders<PaymentReadModel>.Update.PullFilter(
             x => x.AppliedInvoices,
             x => x.InvoiceId == e.InvoiceId
         );
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
 
+        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
+
+        // 3) Push new entry
         var push = Builders<PaymentReadModel>.Update.Push(
             x => x.AppliedInvoices,
             new PaymentAppliedInvoiceReadModel
             {
                 InvoiceId = e.InvoiceId,
-                InvoiceConsecutive = null,
+                InvoiceConsecutive = e.InvoiceConsecutive,
                 AppliedAmount = e.AppliedAmount,
             }
         );
 
-        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = false }, ct);
     }
 
     public async Task ProjectAsync(PaymentPosRejectedDomainEvent e, CancellationToken ct)
@@ -76,7 +88,6 @@ internal sealed class PaymentProjection
         var id = $"payment:{e.PaymentId}";
         var filter = Builders<PaymentReadModel>.Filter.Eq(x => x.Id, id);
 
-        // opcional: guardar en Notes si quieres reflejarlo (tu RM ya tiene Notes)
         var update = Builders<PaymentReadModel>.Update.Set(x => x.Notes, e.Message);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);

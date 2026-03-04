@@ -95,6 +95,7 @@ internal sealed class RegisterCashPaymentCommandHandler
             Notes = cmd.Notes ?? string.Empty,
         };
         payment.RaiseCreated();
+        payment.RaiseApplied(invoice.Id, invoice.Consecutive, applyAmount);
 
         // Crear PaymentDetail
         var detail = new PaymentDetail

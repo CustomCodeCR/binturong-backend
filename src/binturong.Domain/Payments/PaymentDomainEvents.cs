@@ -7,7 +7,9 @@ public sealed record PaymentCreatedDomainEvent(
     Guid ClientId,
     Guid PaymentMethodId,
     DateTime PaymentDateUtc,
-    decimal TotalAmount
+    decimal TotalAmount,
+    string? Reference,
+    string? Notes
 ) : IDomainEvent;
 
 public sealed record PaymentDeletedDomainEvent(Guid PaymentId) : IDomainEvent;
@@ -15,6 +17,7 @@ public sealed record PaymentDeletedDomainEvent(Guid PaymentId) : IDomainEvent;
 public sealed record PaymentAppliedToInvoiceDomainEvent(
     Guid PaymentId,
     Guid InvoiceId,
+    string? InvoiceConsecutive,
     decimal AppliedAmount,
     DateTime AtUtc
 ) : IDomainEvent;
