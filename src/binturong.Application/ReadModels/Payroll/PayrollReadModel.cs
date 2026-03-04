@@ -15,7 +15,7 @@ public sealed class PayrollReadModel
     public DateTime CreatedAtUtc { get; init; }
     public DateTime UpdatedAtUtc { get; init; }
 
-    public IReadOnlyList<PayrollDetailReadModel> Details { get; init; } = [];
+    public List<PayrollDetailReadModel> Details { get; init; } = new();
 }
 
 public sealed class PayrollDetailReadModel

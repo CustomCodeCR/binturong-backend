@@ -36,27 +36,27 @@ internal sealed class GetPayrollByIdQueryHandler
     )
     {
         var col = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
-
         var id = $"payroll:{query.PayrollId}";
+
         var doc = await col.Find(x => x.Id == id).FirstOrDefaultAsync(ct);
+
+        if (doc is null)
+            return Result.Failure<PayrollReadModel>(
+                Error.NotFound("Payroll.NotFound", $"Payroll '{query.PayrollId}' not found.")
+            );
 
         await _bus.AuditAsync(
             _currentUser.UserId,
             "Payroll",
             "Payroll",
             query.PayrollId,
-            doc is null ? "PAYROLL_READ_NOT_FOUND" : "PAYROLL_READ",
+            "PAYROLL_READ",
             string.Empty,
             $"payrollId={query.PayrollId}",
             _request.IpAddress,
             _request.UserAgent,
             ct
         );
-
-        if (doc is null)
-            return Result.Failure<PayrollReadModel>(
-                Error.NotFound("Payroll.NotFound", $"Payroll '{query.PayrollId}' not found.")
-            );
 
         return Result.Success(doc);
     }
