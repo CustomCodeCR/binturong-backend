@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Branches.Create;
 using Application.Features.Branches.Delete;
 using Application.Features.Branches.GetBranchById;
 using Application.Features.Branches.GetBranches;
+using Application.Features.Branches.GetBranchesSelect;
 using Application.Features.Branches.Reports.ExportBranchSalesReportExcel;
 using Application.Features.Branches.Reports.ExportBranchSalesReportPdf;
 using Application.Features.Branches.Reports.GetBranchComparisonReport;
@@ -243,5 +245,25 @@ public sealed class BranchesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.BranchesDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetBranchesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetBranchesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.BranchesRead);
     }
 }

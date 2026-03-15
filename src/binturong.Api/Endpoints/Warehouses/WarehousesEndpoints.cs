@@ -1,7 +1,9 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Warehouses.Create;
 using Application.Features.Warehouses.Delete;
+using Application.Features.Warehouses.GetWarehousesSelect;
 using Application.Features.Warehouses.Update;
 using Application.Security.Scopes;
 
@@ -90,5 +92,25 @@ public sealed class WarehousesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.WarehousesDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetWarehousesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetWarehousesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.WarehousesRead);
     }
 }

@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Clients.Create;
 using Application.Features.Clients.Delete;
 using Application.Features.Clients.GetClientById;
 using Application.Features.Clients.GetClients;
+using Application.Features.Clients.GetClientsSelect;
 using Application.Features.Clients.History.ExportClientHistoryPdf;
 using Application.Features.Clients.History.GetClientHistory;
 using Application.Features.Clients.Update;
@@ -197,5 +199,25 @@ public sealed class ClientsEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.ClientsDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetClientsSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetClientsSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.ClientsRead);
     }
 }

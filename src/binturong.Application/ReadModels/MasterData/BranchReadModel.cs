@@ -22,5 +22,6 @@ public sealed class BranchWarehouseSummaryReadModel
     public Guid WarehouseId { get; init; }
     public string Code { get; init; } = default!;
     public string Name { get; init; } = default!;
+    public string? Description { get; init; }
     public bool IsActive { get; init; }
 }

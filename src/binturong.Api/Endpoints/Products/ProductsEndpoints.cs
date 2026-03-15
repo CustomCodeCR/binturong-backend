@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Products.Create;
 using Application.Features.Products.Delete;
 using Application.Features.Products.GetProductById;
 using Application.Features.Products.GetProducts;
+using Application.Features.Products.GetProductsSelect;
 using Application.Features.Products.Update;
 using Application.ReadModels.Inventory;
 using Application.Security.Scopes;
@@ -138,5 +140,25 @@ public sealed class ProductsEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.ProductsDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetProductsSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetProductsSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.ProductsRead);
     }
 }

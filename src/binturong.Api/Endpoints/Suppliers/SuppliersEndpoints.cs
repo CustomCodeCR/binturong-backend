@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Suppliers.Create;
 using Application.Features.Suppliers.Delete;
 using Application.Features.Suppliers.GetSupplierById;
 using Application.Features.Suppliers.GetSuppliers;
+using Application.Features.Suppliers.GetSuppliersSelect;
 using Application.Features.Suppliers.History.ExportSupplierPurchaseHistoryExcel;
 using Application.Features.Suppliers.History.ExportSupplierPurchaseHistoryPdf;
 using Application.Features.Suppliers.History.GetSupplierPurchaseHistory;
@@ -259,5 +261,25 @@ public sealed class SuppliersEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.SuppliersCreditAssign);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetSuppliersSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetSuppliersSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SuppliersRead);
     }
 }

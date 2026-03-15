@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Users.Create;
 using Application.Features.Users.Delete;
 using Application.Features.Users.GetUserById;
 using Application.Features.Users.GetUsers;
+using Application.Features.Users.GetUsersSelect;
 using Application.Features.Users.Update;
 using Application.ReadModels.Security;
 using Application.Security.Scopes;
@@ -124,5 +126,25 @@ public sealed class UsersEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.UsersDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetUsersSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetUsersSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.UsersRead);
     }
 }

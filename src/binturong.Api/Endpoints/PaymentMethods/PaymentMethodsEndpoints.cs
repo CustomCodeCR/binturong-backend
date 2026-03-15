@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.PaymentMethods.Create;
 using Application.Features.PaymentMethods.Delete;
 using Application.Features.PaymentMethods.GetPaymentMethodById;
 using Application.Features.PaymentMethods.GetPaymentMethods;
+using Application.Features.PaymentMethods.GetPaymentMethodsSelect;
 using Application.Features.PaymentMethods.Update;
 using Application.ReadModels.MasterData;
 using Application.Security.Scopes;
@@ -128,5 +130,28 @@ public sealed class PaymentMethodsEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.PaymentMethodsDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<
+                        GetPaymentMethodsSelectQuery,
+                        IReadOnlyList<SelectOptionDto>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetPaymentMethodsSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.PaymentMethodsRead);
     }
 }

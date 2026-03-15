@@ -1,8 +1,10 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.ProductCategories.Create;
 using Application.Features.ProductCategories.Delete;
 using Application.Features.ProductCategories.GetProductCategories;
+using Application.Features.ProductCategories.GetProductCategoriesSelect;
 using Application.Features.ProductCategories.GetProductCategoryById;
 using Application.Features.ProductCategories.Update;
 using Application.ReadModels.MasterData;
@@ -123,5 +125,28 @@ public sealed class ProductCategoriesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.CategoriesDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<
+                        GetProductCategoriesSelectQuery,
+                        IReadOnlyList<SelectOptionDto>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetProductCategoriesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.CategoriesRead);
     }
 }

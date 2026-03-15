@@ -1,11 +1,13 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Employees.Attendance.CheckIn;
 using Application.Features.Employees.Attendance.CheckOut;
 using Application.Features.Employees.Create;
 using Application.Features.Employees.Delete;
 using Application.Features.Employees.GetEmployeeById;
 using Application.Features.Employees.GetEmployees;
+using Application.Features.Employees.GetEmployeesSelect;
 using Application.Features.Employees.Update;
 using Application.ReadModels.Payroll;
 using Application.Security.Scopes;
@@ -168,5 +170,25 @@ public sealed class EmployeesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.EmployeesAttendanceCheckOut);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetEmployeesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetEmployeesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.EmployeesRead);
     }
 }

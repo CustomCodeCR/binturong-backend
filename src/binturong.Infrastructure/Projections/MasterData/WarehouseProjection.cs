@@ -23,6 +23,7 @@ internal sealed class WarehouseProjection
             e.WarehouseId,
             e.Code,
             e.Name,
+            e.Description,
             e.IsActive,
             e.UpdatedAt,
             ct
@@ -37,6 +38,7 @@ internal sealed class WarehouseProjection
             e.WarehouseId,
             e.Code,
             e.Name,
+            e.Description,
             e.IsActive,
             e.UpdatedAt,
             ct
@@ -123,6 +125,7 @@ internal sealed class WarehouseProjection
         Guid warehouseId,
         string code,
         string name,
+        string? description,
         bool isActive,
         DateTime updatedAt,
         CancellationToken ct
@@ -131,11 +134,11 @@ internal sealed class WarehouseProjection
         var branches = _db.GetCollection<BranchReadModel>(MongoCollections.Branches);
         var id = $"branch:{branchId}";
 
-        // idempotent
         var pull = Builders<BranchReadModel>.Update.PullFilter(
             x => x.Warehouses,
             w => w.WarehouseId == warehouseId
         );
+
         await branches.UpdateOneAsync(x => x.Id == id, pull, cancellationToken: ct);
 
         var summary = new BranchWarehouseSummaryReadModel
@@ -143,6 +146,7 @@ internal sealed class WarehouseProjection
             WarehouseId = warehouseId,
             Code = code,
             Name = name,
+            Description = description,
             IsActive = isActive,
         };
 

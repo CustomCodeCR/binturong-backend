@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Roles.Create;
 using Application.Features.Roles.Delete;
 using Application.Features.Roles.GetRoleById;
 using Application.Features.Roles.GetRoles;
+using Application.Features.Roles.GetRolesSelect;
 using Application.Features.Roles.SetRoleScopes;
 using Application.Features.Roles.Update;
 using Application.ReadModels.Security;
@@ -128,5 +130,25 @@ public sealed class RolesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.RolesAssignScopes);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetRolesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetRolesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.RolesRead);
     }
 }

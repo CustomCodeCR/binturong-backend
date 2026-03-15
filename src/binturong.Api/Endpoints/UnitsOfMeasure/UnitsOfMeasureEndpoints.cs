@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.UnitsOfMeasure.Create;
 using Application.Features.UnitsOfMeasure.Delete;
 using Application.Features.UnitsOfMeasure.GetUnitOfMeasureById;
 using Application.Features.UnitsOfMeasure.GetUnitsOfMeasure;
+using Application.Features.UnitsOfMeasure.GetUnitsOfMeasureSelect;
 using Application.Features.UnitsOfMeasure.Update;
 using Application.ReadModels.MasterData;
 using Application.Security.Scopes;
@@ -116,5 +118,28 @@ public sealed class UnitsOfMeasureEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.UomsDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<
+                        GetUnitsOfMeasureSelectQuery,
+                        IReadOnlyList<SelectOptionDto>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetUnitsOfMeasureSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.UomsRead);
     }
 }

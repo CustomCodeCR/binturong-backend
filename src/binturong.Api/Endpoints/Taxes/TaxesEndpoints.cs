@@ -1,9 +1,11 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Taxes.Create;
 using Application.Features.Taxes.Delete;
 using Application.Features.Taxes.GetTaxById;
 using Application.Features.Taxes.GetTaxes;
+using Application.Features.Taxes.GetTaxesSelect;
 using Application.Features.Taxes.Update;
 using Application.ReadModels.MasterData;
 using Application.Security.Scopes;
@@ -120,5 +122,25 @@ public sealed class TaxesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.TaxesDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    bool? onlyActive,
+                    IQueryHandler<GetTaxesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetTaxesSelectQuery(search, onlyActive ?? true);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.TaxesRead);
     }
 }
