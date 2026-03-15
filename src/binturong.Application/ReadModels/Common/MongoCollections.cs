@@ -8,6 +8,7 @@ public static class MongoCollections
     public const string Taxes = "taxes";
     public const string UnitsOfMeasure = "units_of_measure";
     public const string ProductCategories = "product_categories";
+    public const string PaymentMethods = "payment_methods";
 
     // ===== SECURITY =====
     public const string Users = "users";
