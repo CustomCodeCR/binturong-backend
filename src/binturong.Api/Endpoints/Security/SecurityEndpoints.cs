@@ -1,5 +1,8 @@
 using Api.Security;
+using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
+using Application.Features.Security.GetScopes;
+using Application.ReadModels.Security;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Security;
@@ -13,10 +16,21 @@ public sealed class SecurityEndpoints : IEndpoint
         group
             .MapGet(
                 "/scopes",
-                async (IPermissionService permissions, CancellationToken ct) =>
+                async (
+                    int? page,
+                    int? pageSize,
+                    string? search,
+                    IQueryHandler<GetScopesQuery, IReadOnlyList<ScopeCatalogReadModel>> handler,
+                    CancellationToken ct
+                ) =>
                 {
-                    var scopes = await permissions.GetAllScopesAsync(ct);
-                    return Results.Ok(scopes);
+                    var query = new GetScopesQuery(page ?? 1, pageSize ?? 50, search);
+
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
                 }
             )
             .RequireScope(SecurityScopes.SecurityScopesRead);
@@ -31,6 +45,7 @@ public sealed class SecurityEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await reset.ResetAdminPasswordAsync(req.NewPassword, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
