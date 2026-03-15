@@ -60,11 +60,7 @@ internal sealed class GetScopesQueryHandler
             );
         }
 
-        var docs = await col.Find(filter)
-            .SortBy(x => x.Code)
-            .Skip(query.Skip)
-            .Limit(query.Take)
-            .ToListAsync(ct);
+        var docs = await col.Find(filter).SortBy(x => x.Code).ToListAsync(ct);
 
         await _bus.AuditAsync(
             _currentUser.UserId,
@@ -73,7 +69,7 @@ internal sealed class GetScopesQueryHandler
             null,
             "SCOPE_LIST_READ",
             string.Empty,
-            $"search={query.Search}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
+            $"search={query.Search}; count={docs.Count}",
             _request.IpAddress,
             _request.UserAgent,
             ct

@@ -17,14 +17,12 @@ public sealed class SecurityEndpoints : IEndpoint
             .MapGet(
                 "/scopes",
                 async (
-                    int? page,
-                    int? pageSize,
                     string? search,
                     IQueryHandler<GetScopesQuery, IReadOnlyList<ScopeCatalogReadModel>> handler,
                     CancellationToken ct
                 ) =>
                 {
-                    var query = new GetScopesQuery(page ?? 1, pageSize ?? 50, search);
+                    var query = new GetScopesQuery(search);
 
                     var result = await handler.Handle(query, ct);
 
