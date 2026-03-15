@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
@@ -16,6 +17,7 @@ internal sealed class GetProductsSelectQueryHandler
 {
     private const string Module = "Products";
     private const string Entity = "Product";
+    private const int MaxSelectResults = 100;
 
     private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
@@ -42,12 +44,21 @@ internal sealed class GetProductsSelectQueryHandler
     {
         var col = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
 
-        var filter = BuildFilter(query.Search, query.OnlyActive);
+        var normalizedSearch = Normalize(query.Search);
+        var filter = BuildFilter(normalizedSearch, query.OnlyActive);
 
         var docs = await col.Find(filter)
             .SortBy(x => x.Name)
-            .Project(x => new SelectOptionDto(x.ProductId.ToString(), $"{x.SKU} - {x.Name}", x.SKU))
+            .ThenBy(x => x.SKU)
+            .Limit(MaxSelectResults)
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.ProductId.ToString(),
+                BuildLabel(x),
+                BuildCode(x)
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -57,14 +68,14 @@ internal sealed class GetProductsSelectQueryHandler
                 null,
                 "PRODUCTS_SELECT_READ",
                 string.Empty,
-                $"search={query.Search ?? ""}; onlyActive={query.OnlyActive}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<ProductReadModel> BuildFilter(string? search, bool onlyActive)
@@ -73,16 +84,65 @@ internal sealed class GetProductsSelectQueryHandler
         var filters = new List<FilterDefinition<ProductReadModel>>();
 
         if (onlyActive)
+        {
             filters.Add(builder.Eq(x => x.IsActive, true));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            var re = new BsonRegularExpression(s, "i");
+            var escaped = Regex.Escape(search);
+            var startsWithRegex = new BsonRegularExpression($"^{escaped}", "i");
+            var containsRegex = new BsonRegularExpression(escaped, "i");
 
-            filters.Add(builder.Or(builder.Regex(x => x.SKU, re), builder.Regex(x => x.Name, re)));
+            filters.Add(
+                builder.Or(
+                    builder.Regex(x => x.SKU, startsWithRegex),
+                    builder.Regex(x => x.Barcode, startsWithRegex),
+                    builder.Regex(x => x.Name, containsRegex),
+                    builder.Regex(x => x.Description, containsRegex),
+                    builder.Regex(x => x.CategoryName, containsRegex)
+                )
+            );
         }
 
-        return filters.Count == 0 ? builder.Empty : builder.And(filters);
+        return filters.Count switch
+        {
+            0 => builder.Empty,
+            1 => filters[0],
+            _ => builder.And(filters),
+        };
+    }
+
+    private static string BuildLabel(ProductReadModel x)
+    {
+        var sku = x.SKU?.Trim();
+        var name = x.Name?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(sku) && !string.IsNullOrWhiteSpace(name))
+            return $"{sku} - {name}";
+
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
+
+        if (!string.IsNullOrWhiteSpace(sku))
+            return sku;
+
+        return x.ProductId.ToString();
+    }
+
+    private static string? BuildCode(ProductReadModel x)
+    {
+        if (!string.IsNullOrWhiteSpace(x.SKU))
+            return x.SKU;
+
+        if (!string.IsNullOrWhiteSpace(x.Barcode))
+            return x.Barcode;
+
+        return null;
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
@@ -16,6 +17,7 @@ internal sealed class GetProductCategoriesSelectQueryHandler
 {
     private const string Module = "Categories";
     private const string Entity = "Category";
+    private const int MaxSelectResults = 100;
 
     private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
@@ -42,12 +44,20 @@ internal sealed class GetProductCategoriesSelectQueryHandler
     {
         var col = _db.GetCollection<ProductCategoryReadModel>(MongoCollections.ProductCategories);
 
-        var filter = BuildFilter(query.Search, query.OnlyActive);
+        var normalizedSearch = Normalize(query.Search);
+        var filter = BuildFilter(normalizedSearch, query.OnlyActive);
 
         var docs = await col.Find(filter)
             .SortBy(x => x.Name)
-            .Project(x => new SelectOptionDto(x.CategoryId.ToString(), $"{x.Name}", x.Name))
+            .Limit(MaxSelectResults)
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.CategoryId.ToString(),
+                BuildLabel(x),
+                x.Name
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -57,14 +67,14 @@ internal sealed class GetProductCategoriesSelectQueryHandler
                 null,
                 "CATEGORIES_SELECT_READ",
                 string.Empty,
-                $"search={query.Search ?? ""}; onlyActive={query.OnlyActive}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<ProductCategoryReadModel> BuildFilter(
@@ -76,16 +86,43 @@ internal sealed class GetProductCategoriesSelectQueryHandler
         var filters = new List<FilterDefinition<ProductCategoryReadModel>>();
 
         if (onlyActive)
+        {
             filters.Add(builder.Eq(x => x.IsActive, true));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            var re = new BsonRegularExpression(s, "i");
+            var escaped = Regex.Escape(search);
+            var containsRegex = new BsonRegularExpression(escaped, "i");
 
-            filters.Add(builder.Or(builder.Regex(x => x.Name, re), builder.Regex(x => x.Name, re)));
+            filters.Add(
+                builder.Or(
+                    builder.Regex(x => x.Name, containsRegex),
+                    builder.Regex(x => x.Description, containsRegex)
+                )
+            );
         }
 
-        return filters.Count == 0 ? builder.Empty : builder.And(filters);
+        return filters.Count switch
+        {
+            0 => builder.Empty,
+            1 => filters[0],
+            _ => builder.And(filters),
+        };
+    }
+
+    private static string BuildLabel(ProductCategoryReadModel x)
+    {
+        var name = x.Name?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
+
+        return x.CategoryId.ToString();
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

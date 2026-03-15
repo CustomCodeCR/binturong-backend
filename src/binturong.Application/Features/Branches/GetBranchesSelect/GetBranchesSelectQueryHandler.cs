@@ -51,8 +51,14 @@ internal sealed class GetBranchesSelectQueryHandler
             .SortBy(x => x.Code)
             .ThenBy(x => x.Name)
             .Limit(MaxSelectResults)
-            .Project(x => new SelectOptionDto(x.BranchId.ToString(), BuildLabel(x), x.Code))
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.BranchId.ToString(),
+                BuildLabel(x),
+                x.Code
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -62,14 +68,14 @@ internal sealed class GetBranchesSelectQueryHandler
                 null,
                 "BRANCHES_SELECT_READ",
                 string.Empty,
-                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<BranchReadModel> BuildFilter(string? search, bool onlyActive)

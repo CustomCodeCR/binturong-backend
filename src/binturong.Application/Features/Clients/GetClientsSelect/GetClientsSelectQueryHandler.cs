@@ -52,8 +52,14 @@ internal sealed class GetClientsSelectQueryHandler
             .ThenBy(x => x.ContactName)
             .ThenBy(x => x.Identification)
             .Limit(MaxSelectResults)
-            .Project(x => new SelectOptionDto(x.ClientId.ToString(), BuildLabel(x), BuildCode(x)))
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.ClientId.ToString(),
+                BuildLabel(x),
+                BuildCode(x)
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -63,14 +69,14 @@ internal sealed class GetClientsSelectQueryHandler
                 null,
                 "CLIENTS_SELECT_READ",
                 string.Empty,
-                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<ClientReadModel> BuildFilter(string? search, bool onlyActive)
@@ -117,9 +123,18 @@ internal sealed class GetClientsSelectQueryHandler
         var contactName = x.ContactName?.Trim();
         var identification = x.Identification?.Trim();
 
+        if (
+            !string.IsNullOrWhiteSpace(tradeName)
+            && !string.IsNullOrWhiteSpace(contactName)
+            && !string.IsNullOrWhiteSpace(identification)
+        )
+        {
+            return $"{tradeName} - {contactName} ({identification})";
+        }
+
         if (!string.IsNullOrWhiteSpace(tradeName) && !string.IsNullOrWhiteSpace(identification))
         {
-            return $"{tradeName} - {identification}";
+            return $"{tradeName} ({identification})";
         }
 
         if (!string.IsNullOrWhiteSpace(tradeName) && !string.IsNullOrWhiteSpace(contactName))
@@ -134,7 +149,7 @@ internal sealed class GetClientsSelectQueryHandler
 
         if (!string.IsNullOrWhiteSpace(contactName) && !string.IsNullOrWhiteSpace(identification))
         {
-            return $"{contactName} - {identification}";
+            return $"{contactName} ({identification})";
         }
 
         if (!string.IsNullOrWhiteSpace(contactName))

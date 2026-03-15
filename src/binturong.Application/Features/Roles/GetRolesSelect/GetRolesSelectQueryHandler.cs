@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
@@ -16,6 +17,7 @@ internal sealed class GetRolesSelectQueryHandler
 {
     private const string Module = "Roles";
     private const string Entity = "Role";
+    private const int MaxSelectResults = 100;
 
     private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
@@ -42,17 +44,21 @@ internal sealed class GetRolesSelectQueryHandler
     {
         var col = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
 
-        var filter = BuildFilter(query.Search, query.OnlyActive);
+        var normalizedSearch = Normalize(query.Search);
+        var filter = BuildFilter(normalizedSearch, query.OnlyActive);
 
         var docs = await col.Find(filter)
             .SortBy(x => x.Name)
-            .ThenBy(x => x.Name)
-            .Project(x => new SelectOptionDto(
+            .ThenBy(x => x.Description)
+            .Limit(MaxSelectResults)
+            .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
                 x.RoleId.ToString(),
-                !string.IsNullOrWhiteSpace(x.Name) ? $"{x.Name}" : x.Name,
+                BuildLabel(x),
                 x.Name
             ))
-            .ToListAsync(ct);
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -62,14 +68,14 @@ internal sealed class GetRolesSelectQueryHandler
                 null,
                 "ROLES_SELECT_READ",
                 string.Empty,
-                $"search={query.Search ?? ""}; onlyActive={query.OnlyActive}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<RoleReadModel> BuildFilter(string? search, bool onlyActive)
@@ -78,14 +84,21 @@ internal sealed class GetRolesSelectQueryHandler
         var filters = new List<FilterDefinition<RoleReadModel>>();
 
         if (onlyActive)
+        {
             filters.Add(builder.Eq(x => x.IsActive, true));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            var re = new BsonRegularExpression(s, "i");
+            var escaped = Regex.Escape(search);
+            var containsRegex = new BsonRegularExpression(escaped, "i");
 
-            filters.Add(builder.Or(builder.Regex(x => x.Name, re), builder.Regex(x => x.Name, re)));
+            filters.Add(
+                builder.Or(
+                    builder.Regex(x => x.Name, containsRegex),
+                    builder.Regex(x => x.Description, containsRegex)
+                )
+            );
         }
 
         return filters.Count switch
@@ -94,5 +107,20 @@ internal sealed class GetRolesSelectQueryHandler
             1 => filters[0],
             _ => builder.And(filters),
         };
+    }
+
+    private static string BuildLabel(RoleReadModel x)
+    {
+        var name = x.Name?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
+
+        return x.RoleId.ToString();
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

@@ -49,11 +49,16 @@ internal sealed class GetUsersSelectQueryHandler
 
         var docs = await col.Find(filter)
             .SortBy(x => x.Username)
-            .ThenBy(x => x.Username)
             .ThenBy(x => x.Email)
             .Limit(MaxSelectResults)
-            .Project(x => new SelectOptionDto(x.UserId.ToString(), BuildLabel(x), BuildCode(x)))
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.UserId.ToString(),
+                BuildLabel(x),
+                BuildCode(x)
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -63,14 +68,14 @@ internal sealed class GetUsersSelectQueryHandler
                 null,
                 "USERS_SELECT_READ",
                 string.Empty,
-                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<UserReadModel> BuildFilter(string? search, bool onlyActive)
@@ -79,7 +84,9 @@ internal sealed class GetUsersSelectQueryHandler
         var filters = new List<FilterDefinition<UserReadModel>>();
 
         if (onlyActive)
+        {
             filters.Add(builder.Eq(x => x.IsActive, true));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -91,7 +98,8 @@ internal sealed class GetUsersSelectQueryHandler
                 builder.Or(
                     builder.Regex(x => x.Username, startsWithRegex),
                     builder.Regex(x => x.Email, startsWithRegex),
-                    builder.Regex(x => x.Username, containsRegex)
+                    builder.Regex(x => x.Username, containsRegex),
+                    builder.Regex(x => x.Email, containsRegex)
                 )
             );
         }
@@ -106,15 +114,11 @@ internal sealed class GetUsersSelectQueryHandler
 
     private static string BuildLabel(UserReadModel x)
     {
-        var fullName = x.Username?.Trim();
-        var email = x.Email?.Trim();
         var username = x.Username?.Trim();
+        var email = x.Email?.Trim();
 
-        if (!string.IsNullOrWhiteSpace(fullName) && !string.IsNullOrWhiteSpace(email))
-            return $"{fullName} - {email}";
-
-        if (!string.IsNullOrWhiteSpace(fullName) && !string.IsNullOrWhiteSpace(username))
-            return $"{fullName} - {username}";
+        if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(email))
+            return $"{username} - {email}";
 
         if (!string.IsNullOrWhiteSpace(email))
             return email;
@@ -122,7 +126,7 @@ internal sealed class GetUsersSelectQueryHandler
         if (!string.IsNullOrWhiteSpace(username))
             return username;
 
-        return fullName ?? string.Empty;
+        return x.UserId.ToString();
     }
 
     private static string? BuildCode(UserReadModel x)

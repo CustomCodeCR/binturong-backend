@@ -52,8 +52,14 @@ internal sealed class GetEmployeesSelectQueryHandler
             .ThenBy(x => x.NationalId)
             .ThenBy(x => x.Email)
             .Limit(MaxSelectResults)
-            .Project(x => new SelectOptionDto(x.EmployeeId.ToString(), BuildLabel(x), BuildCode(x)))
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.EmployeeId.ToString(),
+                BuildLabel(x),
+                BuildCode(x)
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -63,14 +69,14 @@ internal sealed class GetEmployeesSelectQueryHandler
                 null,
                 "EMPLOYEES_SELECT_READ",
                 string.Empty,
-                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<EmployeeReadModel> BuildFilter(string? search, bool onlyActive)

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Security;
 using Application.Abstractions.Web;
@@ -16,6 +17,7 @@ internal sealed class GetTaxesSelectQueryHandler
 {
     private const string Module = "Taxes";
     private const string Entity = "Tax";
+    private const int MaxSelectResults = 100;
 
     private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
@@ -42,12 +44,21 @@ internal sealed class GetTaxesSelectQueryHandler
     {
         var col = _db.GetCollection<TaxReadModel>(MongoCollections.Taxes);
 
-        var filter = BuildFilter(query.Search, query.OnlyActive);
+        var normalizedSearch = Normalize(query.Search);
+        var filter = BuildFilter(normalizedSearch, query.OnlyActive);
 
         var docs = await col.Find(filter)
             .SortBy(x => x.Code)
-            .Project(x => new SelectOptionDto(x.TaxId.ToString(), $"{x.Code} - {x.Name}", x.Code))
+            .ThenBy(x => x.Name)
+            .Limit(MaxSelectResults)
             .ToListAsync(ct);
+
+        var result = docs.Select(x => new SelectOptionDto(
+                x.TaxId.ToString(),
+                BuildLabel(x),
+                x.Code
+            ))
+            .ToList();
 
         await _bus.Send(
             new CreateAuditLogCommand(
@@ -57,14 +68,14 @@ internal sealed class GetTaxesSelectQueryHandler
                 null,
                 "TAXES_SELECT_READ",
                 string.Empty,
-                $"search={query.Search ?? ""}; onlyActive={query.OnlyActive}; returned={docs.Count}",
+                $"search={normalizedSearch ?? ""}; onlyActive={query.OnlyActive}; limit={MaxSelectResults}; returned={result.Count}",
                 _request.IpAddress,
                 _request.UserAgent
             ),
             ct
         );
 
-        return Result.Success<IReadOnlyList<SelectOptionDto>>(docs);
+        return Result.Success<IReadOnlyList<SelectOptionDto>>(result);
     }
 
     private static FilterDefinition<TaxReadModel> BuildFilter(string? search, bool onlyActive)
@@ -73,16 +84,50 @@ internal sealed class GetTaxesSelectQueryHandler
         var filters = new List<FilterDefinition<TaxReadModel>>();
 
         if (onlyActive)
+        {
             filters.Add(builder.Eq(x => x.IsActive, true));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim();
-            var re = new BsonRegularExpression(s, "i");
+            var escaped = Regex.Escape(search);
+            var containsRegex = new BsonRegularExpression(escaped, "i");
 
-            filters.Add(builder.Or(builder.Regex(x => x.Code, re), builder.Regex(x => x.Name, re)));
+            filters.Add(
+                builder.Or(
+                    builder.Regex(x => x.Code, containsRegex),
+                    builder.Regex(x => x.Name, containsRegex)
+                )
+            );
         }
 
-        return filters.Count == 0 ? builder.Empty : builder.And(filters);
+        return filters.Count switch
+        {
+            0 => builder.Empty,
+            1 => filters[0],
+            _ => builder.And(filters),
+        };
+    }
+
+    private static string BuildLabel(TaxReadModel x)
+    {
+        var code = x.Code?.Trim();
+        var name = x.Name?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(name))
+            return $"{code} - {name}";
+
+        if (!string.IsNullOrWhiteSpace(name))
+            return name;
+
+        if (!string.IsNullOrWhiteSpace(code))
+            return code;
+
+        return x.TaxId.ToString();
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }
