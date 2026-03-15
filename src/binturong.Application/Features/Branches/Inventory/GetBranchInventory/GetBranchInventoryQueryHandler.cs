@@ -37,19 +37,27 @@ internal sealed class GetBranchInventoryQueryHandler
     )
     {
         var branches = _db.GetCollection<BranchReadModel>(MongoCollections.Branches);
+        var products = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
+        var stocks = _db.GetCollection<ProductStockReadModel>(MongoCollections.ProductStocks);
+
         var branch = await branches
             .Find(x => x.Id == $"branch:{query.BranchId}")
             .FirstOrDefaultAsync(ct);
 
         if (branch is null)
+        {
             return Result.Failure<IReadOnlyList<BranchInventoryItemReadModel>>(
                 Error.NotFound("Branches.NotFound", $"Branch '{query.BranchId}' not found")
             );
+        }
 
-        var warehouseIds = branch.Warehouses.Select(w => w.WarehouseId).ToHashSet();
+        var warehouseIds = branch
+            .Warehouses.Select(x => x.WarehouseId)
+            .Where(x => x != Guid.Empty)
+            .ToHashSet();
+
         if (warehouseIds.Count == 0)
         {
-            // Audit success (empty inventory is still a valid read)
             await _bus.AuditAsync(
                 _currentUser.UserId,
                 "Inventory",
@@ -68,19 +76,37 @@ internal sealed class GetBranchInventoryQueryHandler
             );
         }
 
-        var stocks = _db.GetCollection<ProductStockReadModel>(MongoCollections.ProductStocks);
-        var docs = await stocks.Find(_ => true).ToListAsync(ct);
+        var stockDocs = await stocks.Find(_ => true).ToListAsync(ct);
 
-        var result = docs.Select(d =>
+        var productIds = stockDocs
+            .Select(x => x.ProductId)
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        var productDocs = await products
+            .Find(x => productIds.Contains(x.ProductId))
+            .ToListAsync(ct);
+
+        var productNameByProductId = productDocs.ToDictionary(x => x.ProductId, x => x.Name);
+
+        var result = stockDocs
+            .Select(stock =>
             {
-                var qty = d
-                    .Warehouses.Where(w => warehouseIds.Contains(w.WarehouseId))
-                    .Sum(w => w.CurrentStock);
+                var qty = stock
+                    .Warehouses.Where(x => warehouseIds.Contains(x.WarehouseId))
+                    .Sum(x => x.CurrentStock);
+
+                var resolvedProductName =
+                    productNameByProductId.TryGetValue(stock.ProductId, out var productName)
+                    && !string.IsNullOrWhiteSpace(productName)
+                        ? productName
+                        : stock.ProductName;
 
                 return new BranchInventoryItemReadModel
                 {
-                    ProductId = d.ProductId,
-                    ProductName = d.ProductName,
+                    ProductId = stock.ProductId,
+                    ProductName = resolvedProductName,
                     Stock = qty,
                 };
             })
