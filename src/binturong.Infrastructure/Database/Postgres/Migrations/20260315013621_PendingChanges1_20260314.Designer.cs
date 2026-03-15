@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Database.Postgres;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace binturong.Infrastructure.Database.Postgres.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315013621_PendingChanges1_20260314")]
+    partial class PendingChanges1_20260314
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3722,17 +3725,24 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
             modelBuilder.Entity("Domain.UserRoles.UserRole", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("UserRoleId");
+                        .HasColumnName("id");
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid")
-                        .HasColumnName("RoleId");
+                        .HasColumnName("role_id");
+
+                    b.Property<Guid?>("RoleId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id1");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
-                        .HasColumnName("UserId");
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id1");
 
                     b.HasKey("Id")
                         .HasName("pk_user_roles");
@@ -3740,11 +3750,17 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.HasIndex("RoleId")
                         .HasDatabaseName("ix_user_roles_role_id");
 
+                    b.HasIndex("RoleId1")
+                        .HasDatabaseName("ix_user_roles_role_id1");
+
                     b.HasIndex("UserId")
                         .IsUnique()
                         .HasDatabaseName("ix_user_roles_user_id");
 
-                    b.ToTable("UserRoles", (string)null);
+                    b.HasIndex("UserId1")
+                        .HasDatabaseName("ix_user_roles_user_id1");
+
+                    b.ToTable("user_roles", (string)null);
                 });
 
             modelBuilder.Entity("Domain.UserScopes.UserScope", b =>
@@ -4954,19 +4970,29 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
             modelBuilder.Entity("Domain.UserRoles.UserRole", b =>
                 {
-                    b.HasOne("Domain.Roles.Role", "Role")
-                        .WithMany("UserRoles")
+                    b.HasOne("Domain.Roles.Role", null)
+                        .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_roles_roles_role_id");
 
-                    b.HasOne("Domain.Users.User", "User")
+                    b.HasOne("Domain.Roles.Role", "Role")
                         .WithMany("UserRoles")
+                        .HasForeignKey("RoleId1")
+                        .HasConstraintName("fk_user_roles_roles_role_id1");
+
+                    b.HasOne("Domain.Users.User", null)
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_roles_users_user_id");
+
+                    b.HasOne("Domain.Users.User", "User")
+                        .WithMany("UserRoles")
+                        .HasForeignKey("UserId1")
+                        .HasConstraintName("fk_user_roles_users_user_id1");
 
                     b.Navigation("Role");
 

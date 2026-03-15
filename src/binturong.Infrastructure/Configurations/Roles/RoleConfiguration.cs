@@ -11,10 +11,14 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.ToTable("Roles");
 
         builder.HasKey(x => x.Id);
+
         builder.Property(x => x.Id).HasColumnName("RoleId");
 
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+
         builder.Property(x => x.Description).HasMaxLength(255);
+
+        builder.Property(x => x.IsActive).IsRequired();
 
         builder.HasIndex(x => x.Name).IsUnique();
 
@@ -22,12 +26,14 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasMany(x => x.UserRoles)
             .WithOne(x => x.Role)
             .HasForeignKey(x => x.RoleId)
+            .HasPrincipalKey(x => x.Id)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder
             .HasMany(x => x.RoleScopes)
             .WithOne(x => x.Role)
             .HasForeignKey(x => x.RoleId)
+            .HasPrincipalKey(x => x.Id)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

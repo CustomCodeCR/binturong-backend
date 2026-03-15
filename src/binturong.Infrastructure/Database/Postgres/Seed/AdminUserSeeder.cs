@@ -20,10 +20,7 @@ public sealed class AdminUserSeeder
     {
         var now = DateTime.UtcNow;
 
-        // =========================
-        // USER
-        // =========================
-        var admin = await _db.Users.FirstOrDefaultAsync(u => u.Username == "admin", ct);
+        var admin = await _db.Users.FirstOrDefaultAsync(x => x.Username == "admin", ct);
 
         if (admin is null)
         {
@@ -43,36 +40,35 @@ public sealed class AdminUserSeeder
             await _db.SaveChangesAsync(ct);
         }
 
-        // =========================
-        // ROLE
-        // =========================
         var adminRole =
-            await _db.Roles.FirstOrDefaultAsync(r => r.Name == "SuperAdmin", ct)
-            ?? await _db.Roles.FirstAsync(r => r.Name == "Admin", ct);
+            await _db.Roles.FirstOrDefaultAsync(x => x.Name == "SuperAdmin", ct)
+            ?? await _db.Roles.FirstAsync(x => x.Name == "Admin", ct);
 
-        var existing = await _db.UserRoles.FirstOrDefaultAsync(
-            x => x.UserId == admin.Id && x.RoleId == adminRole.Id,
-            ct
-        );
+        var currentRoles = await _db.UserRoles.Where(x => x.UserId == admin.Id).ToListAsync(ct);
 
-        if (existing is null)
+        foreach (var currentRole in currentRoles)
         {
-            var ur = new UserRole
+            if (currentRole.RoleId != adminRole.Id)
+            {
+                _db.UserRoles.Remove(currentRole);
+            }
+        }
+
+        var alreadyAssigned = currentRoles.Any(x => x.RoleId == adminRole.Id);
+
+        if (!alreadyAssigned)
+        {
+            var userRole = new UserRole
             {
                 Id = Guid.NewGuid(),
                 UserId = admin.Id,
                 RoleId = adminRole.Id,
             };
 
-            ur.RaiseAssigned();
+            userRole.RaiseAssigned();
+            _db.UserRoles.Add(userRole);
+        }
 
-            _db.UserRoles.Add(ur);
-            await _db.SaveChangesAsync(ct);
-        }
-        else
-        {
-            existing.RaiseAssigned();
-            await _db.SaveChangesAsync(ct);
-        }
+        await _db.SaveChangesAsync(ct);
     }
 }

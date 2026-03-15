@@ -11,14 +11,23 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.ToTable("Users");
 
         builder.HasKey(x => x.Id);
+
         builder.Property(x => x.Id).HasColumnName("UserId");
 
         builder.Property(x => x.Username).HasMaxLength(100).IsRequired();
+
         builder.Property(x => x.Email).HasMaxLength(150).IsRequired();
+
         builder.Property(x => x.PasswordHash).HasMaxLength(255).IsRequired();
+
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.MustChangePassword).IsRequired();
+        builder.Property(x => x.FailedAttempts).IsRequired();
 
         builder.Property(x => x.CreatedAt);
         builder.Property(x => x.UpdatedAt);
+        builder.Property(x => x.LastLogin);
+        builder.Property(x => x.LockedUntil);
 
         builder.HasIndex(x => x.Email).IsUnique();
 
@@ -26,6 +35,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMany(x => x.UserRoles)
             .WithOne(x => x.User)
             .HasForeignKey(x => x.UserId)
+            .HasPrincipalKey(x => x.Id)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder

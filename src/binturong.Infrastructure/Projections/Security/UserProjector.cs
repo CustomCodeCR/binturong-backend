@@ -1,7 +1,6 @@
 using Application.Abstractions.Projections;
 using Application.ReadModels.Common;
 using Application.ReadModels.Security;
-using Domain.UserRoles;
 using Domain.Users;
 using MongoDB.Driver;
 
@@ -10,17 +9,14 @@ namespace Infrastructure.Projections.Security;
 internal sealed class UserProjection
     : IProjector<UserRegisteredDomainEvent>,
         IProjector<UserUpdatedDomainEvent>,
-        IProjector<UserDeletedDomainEvent>,
-        IProjector<UserRoleAssignedDomainEvent>,
-        IProjector<UserRoleRemovedDomainEvent>
+        IProjector<UserDeletedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
-    public UserProjection(IMongoDatabase db) => _db = db;
-
-    // =========================
-    // USER ROOT
-    // =========================
+    public UserProjection(IMongoDatabase db)
+    {
+        _db = db;
+    }
 
     public async Task ProjectAsync(UserRegisteredDomainEvent e, CancellationToken ct)
     {
@@ -36,11 +32,15 @@ internal sealed class UserProjection
             .Set(x => x.IsActive, e.IsActive)
             .Set(x => x.CreatedAt, e.CreatedAt)
             .Set(x => x.UpdatedAt, e.UpdatedAt)
+            .SetOnInsert(x => x.LastLogin, null)
+            .SetOnInsert(x => x.MustChangePassword, false)
+            .SetOnInsert(x => x.FailedAttempts, 0)
+            .SetOnInsert(x => x.LockedUntil, null)
             .SetOnInsert(x => x.Roles, new List<UserRoleReadModel>())
             .SetOnInsert(x => x.Scopes, new List<string>());
 
         await col.UpdateOneAsync(
-            x => x.Id == id,
+            x => x.UserId == e.UserId,
             update,
             new UpdateOptions { IsUpsert = true },
             ct
@@ -68,55 +68,5 @@ internal sealed class UserProjection
     {
         var col = _db.GetCollection<UserReadModel>(MongoCollections.Users);
         await col.DeleteOneAsync(x => x.UserId == e.UserId, ct);
-    }
-
-    // =========================
-    // ROLES
-    // =========================
-
-    public async Task ProjectAsync(UserRoleAssignedDomainEvent e, CancellationToken ct)
-    {
-        await RebuildUserSecurityAsync(e.UserId, ct);
-    }
-
-    public async Task ProjectAsync(UserRoleRemovedDomainEvent e, CancellationToken ct)
-    {
-        await RebuildUserSecurityAsync(e.UserId, ct);
-    }
-
-    // =========================
-    // REBUILD SNAPSHOT
-    // =========================
-
-    private async Task RebuildUserSecurityAsync(Guid userId, CancellationToken ct)
-    {
-        var users = _db.GetCollection<UserReadModel>(MongoCollections.Users);
-        var roles = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
-
-        // 1️⃣ Obtener roles del usuario (desde Mongo Roles)
-        var roleDocs = await roles
-            .Find(r => r.Scopes.Any()) // roles válidos
-            .ToListAsync(ct);
-
-        var userRoles = roleDocs
-            .Select(r => new UserRoleReadModel { RoleId = r.RoleId, Name = r.Name })
-            .ToList();
-
-        // 2️⃣ Recalcular scopes
-        var scopes = roleDocs
-            .SelectMany(r => r.Scopes)
-            .Select(s => s.Code)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        // 3️⃣ Update atomico
-        await users.UpdateOneAsync(
-            x => x.UserId == userId,
-            Builders<UserReadModel>
-                .Update.Set(x => x.Roles, userRoles)
-                .Set(x => x.Scopes, scopes)
-                .Set(x => x.UpdatedAt, DateTime.UtcNow),
-            cancellationToken: ct
-        );
     }
 }

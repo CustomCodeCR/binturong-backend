@@ -53,3 +53,11 @@ public sealed class UserRoleReadModel
     public Guid RoleId { get; init; }
     public string Name { get; init; } = default!;
 }
+
+public sealed class ScopeCatalogReadModel
+{
+    public string Id { get; init; } = default!;
+    public Guid ScopeId { get; init; }
+    public string Code { get; init; } = default!;
+    public string? Description { get; init; }
+}

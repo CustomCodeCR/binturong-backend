@@ -33,14 +33,21 @@ internal sealed class RemoveRoleFromUserCommandHandler : ICommandHandler<RemoveR
 
     public async Task<Result> Handle(RemoveRoleFromUserCommand command, CancellationToken ct)
     {
-        var ur = await _db.UserRoles.FirstOrDefaultAsync(
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == command.UserId, ct);
+        if (user is null)
+        {
+            return Result.Failure(
+                Error.NotFound("Users.NotFound", $"User '{command.UserId}' not found")
+            );
+        }
+
+        var userRole = await _db.UserRoles.FirstOrDefaultAsync(
             x => x.UserId == command.UserId && x.RoleId == command.RoleId,
             ct
         );
 
-        if (ur is null)
+        if (userRole is null)
         {
-            // Optional: audit "already removed"
             await _bus.Send(
                 new CreateAuditLogCommand(
                     _currentUser.UserId,
@@ -59,10 +66,8 @@ internal sealed class RemoveRoleFromUserCommandHandler : ICommandHandler<RemoveR
             return Result.Success();
         }
 
-        _db.UserRoles.Remove(ur);
-
-        var u = new Domain.Users.User { Id = command.UserId };
-        u.Raise(new Domain.UserRoles.UserRoleRemovedDomainEvent(command.UserId, command.RoleId));
+        _db.UserRoles.Remove(userRole);
+        user.Raise(new Domain.UserRoles.UserRoleRemovedDomainEvent(command.UserId, command.RoleId));
 
         await _db.SaveChangesAsync(ct);
 

@@ -20,7 +20,10 @@ internal sealed class RoleProjection
 {
     private readonly IMongoDatabase _db;
 
-    public RoleProjection(IMongoDatabase db) => _db = db;
+    public RoleProjection(IMongoDatabase db)
+    {
+        _db = db;
+    }
 
     public Task ProjectAsync(RoleCreatedDomainEvent e, CancellationToken ct) =>
         UpsertRoleAsync(e.RoleId, e.Name, e.Description, e.IsActive, ct);
@@ -31,44 +34,43 @@ internal sealed class RoleProjection
     public async Task ProjectAsync(RoleDeletedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
-        await col.DeleteOneAsync(x => x.Id == $"role:{e.RoleId}", ct);
+        await col.DeleteOneAsync(x => x.RoleId == e.RoleId, ct);
     }
 
     public async Task ProjectAsync(RoleScopeAssignedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
-        var id = $"role:{e.RoleId}";
 
         var pull = Builders<RoleReadModel>.Update.PullFilter(
             x => x.Scopes,
             s => s.Code == e.ScopeCode
         );
-        await col.UpdateOneAsync(x => x.Id == id, pull, cancellationToken: ct);
+
+        await col.UpdateOneAsync(x => x.RoleId == e.RoleId, pull, cancellationToken: ct);
 
         var push = Builders<RoleReadModel>.Update.Push(
             x => x.Scopes,
             new ScopeReadModel
             {
-                ScopeId = Guid.NewGuid(),
+                ScopeId = e.ScopeId,
                 Code = e.ScopeCode,
                 Description = null,
             }
         );
 
-        await col.UpdateOneAsync(x => x.Id == id, push, cancellationToken: ct);
+        await col.UpdateOneAsync(x => x.RoleId == e.RoleId, push, cancellationToken: ct);
     }
 
     public async Task ProjectAsync(RoleScopeRemovedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
-        var id = $"role:{e.RoleId}";
 
         var update = Builders<RoleReadModel>.Update.PullFilter(
             x => x.Scopes,
             s => s.Code == e.ScopeCode
         );
 
-        await col.UpdateOneAsync(x => x.Id == id, update, cancellationToken: ct);
+        await col.UpdateOneAsync(x => x.RoleId == e.RoleId, update, cancellationToken: ct);
     }
 
     public Task ProjectAsync(ScopeCreatedDomainEvent e, CancellationToken ct) =>
@@ -80,12 +82,13 @@ internal sealed class RoleProjection
     public async Task ProjectAsync(ScopeDeletedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<ScopeCatalogReadModel>(MongoCollections.Scopes);
-        await col.DeleteOneAsync(x => x.Id == $"scope:{e.ScopeId}", ct);
+        await col.DeleteOneAsync(x => x.ScopeId == e.ScopeId, ct);
 
         var roles = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
+
         var update = Builders<RoleReadModel>.Update.PullFilter(
             x => x.Scopes,
-            s => s.Code == e.ScopeId.ToString()
+            s => s.ScopeId == e.ScopeId
         );
 
         await roles.UpdateManyAsync(
@@ -106,11 +109,11 @@ internal sealed class RoleProjection
         var col = _db.GetCollection<RoleReadModel>(MongoCollections.Roles);
 
         var id = $"role:{roleId}";
-        var filter = Builders<RoleReadModel>.Filter.Eq(x => x.Id, id);
+        var filter = Builders<RoleReadModel>.Filter.Eq(x => x.RoleId, roleId);
 
         var update = Builders<RoleReadModel>
             .Update.SetOnInsert(x => x.Id, id)
-            .SetOnInsert(x => x.RoleId, Guid.NewGuid())
+            .SetOnInsert(x => x.RoleId, roleId)
             .Set(x => x.Name, name)
             .Set(x => x.Description, description)
             .Set(x => x.IsActive, isActive)
@@ -129,22 +132,14 @@ internal sealed class RoleProjection
         var col = _db.GetCollection<ScopeCatalogReadModel>(MongoCollections.Scopes);
 
         var id = $"scope:{scopeId}";
-        var filter = Builders<ScopeCatalogReadModel>.Filter.Eq(x => x.Id, id);
+        var filter = Builders<ScopeCatalogReadModel>.Filter.Eq(x => x.ScopeId, scopeId);
 
         var update = Builders<ScopeCatalogReadModel>
             .Update.SetOnInsert(x => x.Id, id)
-            .SetOnInsert(x => x.ScopeId, 0)
+            .SetOnInsert(x => x.ScopeId, scopeId)
             .Set(x => x.Code, code)
             .Set(x => x.Description, description);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
-}
-
-public sealed class ScopeCatalogReadModel
-{
-    public string Id { get; init; } = default!;
-    public int ScopeId { get; init; }
-    public string Code { get; init; } = default!;
-    public string? Description { get; init; }
 }

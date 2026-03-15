@@ -126,9 +126,12 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
             user.FailedAttempts += 1;
 
             if (user.FailedAttempts >= 5)
+            {
                 user.LockedUntil = DateTime.UtcNow.AddMinutes(15);
+            }
 
             user.UpdatedAt = DateTime.UtcNow;
+            user.RaiseUpdated();
 
             await _db.SaveChangesAsync(ct);
 
@@ -199,6 +202,7 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
         user.LockedUntil = null;
         user.LastLogin = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
+        user.RaiseUpdated();
 
         await _db.SaveChangesAsync(ct);
 
