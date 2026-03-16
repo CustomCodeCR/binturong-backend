@@ -2,10 +2,11 @@ using Api.Extensions;
 using Application;
 using Infrastructure;
 using Infrastructure.Notifications;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(); 
+builder.Services.AddCors();
 
 builder.Services.AddSwaggerWithJwt();
 builder.Services.AddEndpoints(typeof(Program).Assembly);
@@ -14,7 +15,6 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -38,14 +38,28 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors(policy =>
-    policy
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .SetIsOriginAllowed(_ => true) 
-        .AllowCredentials()
+    policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials()
 );
 
 app.UseHttpsRedirection();
+
+var localRootPath = builder.Configuration["Storage:Local:RootPath"];
+
+if (!string.IsNullOrWhiteSpace(localRootPath))
+{
+    var absoluteRootPath = Path.GetFullPath(localRootPath);
+
+    Directory.CreateDirectory(absoluteRootPath);
+
+    app.UseStaticFiles(
+        new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(absoluteRootPath),
+            RequestPath = "/storage",
+        }
+    );
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -54,3 +68,4 @@ app.MapGet("/health", () => Results.Ok("OK")).WithTags("Health");
 app.MapHub<NotificationsHub>("/hubs/notifications");
 
 app.Run();
+

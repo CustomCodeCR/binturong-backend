@@ -27,6 +27,9 @@ public sealed class HybridObjectStorage : IObjectStorage
     public Task<bool> ExistsAsync(string key, CancellationToken ct) =>
         UseS3() ? _s3.ExistsAsync(key, ct) : _local.ExistsAsync(key, ct);
 
+    public Task<string> GetReadUrlAsync(string key, CancellationToken ct) =>
+        UseS3() ? _s3.GetReadUrlAsync(key, ct) : _local.GetReadUrlAsync(key, ct);
+
     public string GetPublicUrl(string key) =>
         UseS3() ? _s3.GetPublicUrl(key) : _local.GetPublicUrl(key);
 

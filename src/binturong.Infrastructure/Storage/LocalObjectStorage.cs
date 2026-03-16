@@ -12,6 +12,7 @@ public sealed class LocalObjectStorage : IObjectStorage
     {
         _rootPath = opt.Local.RootPath;
         _publicBaseUrl = opt.Local.PublicBaseUrl ?? string.Empty;
+
         Directory.CreateDirectory(_rootPath);
     }
 
@@ -19,6 +20,7 @@ public sealed class LocalObjectStorage : IObjectStorage
     {
         var absPath = GetAbsolutePath(key);
         var dir = Path.GetDirectoryName(absPath);
+
         if (!string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
@@ -31,12 +33,14 @@ public sealed class LocalObjectStorage : IObjectStorage
             FileAccess.Write,
             FileShare.None
         );
+
         await content.CopyToAsync(fs, ct);
     }
 
     public Task DeleteAsync(string key, CancellationToken ct)
     {
         var absPath = GetAbsolutePath(key);
+
         if (File.Exists(absPath))
             File.Delete(absPath);
 
@@ -49,12 +53,19 @@ public sealed class LocalObjectStorage : IObjectStorage
         return Task.FromResult(File.Exists(absPath));
     }
 
+    public Task<string> GetReadUrlAsync(string key, CancellationToken ct)
+    {
+        return Task.FromResult(GetPublicUrl(key));
+    }
+
     public string GetPublicUrl(string key)
     {
-        if (string.IsNullOrWhiteSpace(_publicBaseUrl))
-            return key;
+        var normalizedKey = key.Replace("\\", "/").TrimStart('/');
 
-        return $"{_publicBaseUrl.TrimEnd('/')}/{key.TrimStart('/')}";
+        if (string.IsNullOrWhiteSpace(_publicBaseUrl))
+            return $"/storage/{normalizedKey}";
+
+        return $"{_publicBaseUrl.TrimEnd('/')}/{normalizedKey}";
     }
 
     private string GetAbsolutePath(string key)

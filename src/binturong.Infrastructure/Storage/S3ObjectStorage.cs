@@ -54,11 +54,24 @@ public sealed class S3ObjectStorage : IObjectStorage
         }
     }
 
+    public Task<string> GetReadUrlAsync(string key, CancellationToken ct)
+    {
+        var request = new GetPreSignedUrlRequest
+        {
+            BucketName = _opt.S3.Bucket,
+            Key = NormalizeKey(key),
+            Verb = HttpVerb.GET,
+            Expires = DateTime.UtcNow.AddMinutes(10),
+        };
+
+        var url = _s3.GetPreSignedURL(request);
+        return Task.FromResult(url);
+    }
+
     public string GetPublicUrl(string key)
     {
-        // If you use CloudFront, change this
         return $"https://{_opt.S3.Bucket}.s3.amazonaws.com/{NormalizeKey(key)}";
     }
 
-    private string NormalizeKey(string key) => key.TrimStart('/');
+    private static string NormalizeKey(string key) => key.TrimStart('/');
 }
