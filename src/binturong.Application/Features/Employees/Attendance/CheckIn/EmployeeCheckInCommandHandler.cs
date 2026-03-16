@@ -36,9 +36,7 @@ internal sealed class EmployeeCheckInCommandHandler : ICommandHandler<EmployeeCh
         var ua = _request.UserAgent;
         var userId = _currentUser.UserId;
 
-        var employee = await _db
-            .Employees.Include(x => x.History)
-            .FirstOrDefaultAsync(x => x.Id == cmd.EmployeeId, ct);
+        var employee = await _db.Employees.FirstOrDefaultAsync(x => x.Id == cmd.EmployeeId, ct);
 
         if (employee is null)
         {
@@ -58,14 +56,16 @@ internal sealed class EmployeeCheckInCommandHandler : ICommandHandler<EmployeeCh
             return Result.Failure(EmployeeErrors.NotFound(cmd.EmployeeId));
         }
 
-        var lastEvent = employee
-            .History.OrderByDescending(h => h.EventDate)
+        var lastEvent = await _db
+            .EmployeeHistory.Where(h => h.EmployeeId == employee.Id)
+            .OrderByDescending(h => h.EventDate)
             .ThenByDescending(h => h.Id)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync(ct);
 
         var hasOpen = lastEvent?.EventType == "CHECK_IN";
 
         var now = DateTime.UtcNow;
+
         var result = employee.RegisterCheckIn(hasOpen, now);
         if (result.IsFailure)
         {
@@ -75,7 +75,7 @@ internal sealed class EmployeeCheckInCommandHandler : ICommandHandler<EmployeeCh
                 "Employee",
                 employee.Id,
                 "EMPLOYEE_CHECK_IN_FAILED",
-                $"lastEventType={lastEvent?.EventType}; lastEventDate={lastEvent?.EventDate}",
+                $"lastEventType={lastEvent?.EventType}; lastEventDate={lastEvent?.EventDate:O}",
                 $"reason=domain_rejected; employeeId={employee.Id}; hasOpen={hasOpen}; error={result.Error}",
                 ip,
                 ua,
@@ -92,7 +92,7 @@ internal sealed class EmployeeCheckInCommandHandler : ICommandHandler<EmployeeCh
                 EmployeeId = employee.Id,
                 EventType = "CHECK_IN",
                 Description = "Employee check-in",
-                EventDate = DateOnly.FromDateTime(now),
+                EventDate = now,
             }
         );
 
@@ -104,7 +104,7 @@ internal sealed class EmployeeCheckInCommandHandler : ICommandHandler<EmployeeCh
             "Employee",
             employee.Id,
             "EMPLOYEE_CHECK_IN",
-            $"lastEventType={lastEvent?.EventType}; lastEventDate={lastEvent?.EventDate}",
+            $"lastEventType={lastEvent?.EventType}; lastEventDate={lastEvent?.EventDate:O}",
             $"employeeId={employee.Id}; eventType=CHECK_IN; at={now:O}",
             ip,
             ua,

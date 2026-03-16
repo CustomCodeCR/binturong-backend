@@ -160,13 +160,15 @@ public static class ScopeRegistry
             "employees.attendance.checkin",
             "Employee check-in",
             Roles.Admin,
-            Roles.Operator
+            Roles.Operator,
+            Roles.Manager
         ),
         new ScopeDefinition(
             "employees.attendance.checkout",
             "Employee check-out",
             Roles.Admin,
-            Roles.Operator
+            Roles.Operator,
+            Roles.Manager
         ),
         // =========================
         // Security / System

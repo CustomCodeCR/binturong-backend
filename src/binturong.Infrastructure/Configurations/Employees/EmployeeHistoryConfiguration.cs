@@ -20,6 +20,8 @@ internal sealed class EmployeeHistoryConfiguration : IEntityTypeConfiguration<Em
 
         builder.HasIndex(x => x.EmployeeId);
 
+        builder.Property(x => x.EventDate).HasColumnType("timestamptz").IsRequired();
+
         builder
             .HasOne(x => x.Employee)
             .WithMany(x => x.History)
