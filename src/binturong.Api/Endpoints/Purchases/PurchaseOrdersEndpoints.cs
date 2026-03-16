@@ -1,5 +1,7 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
+using Application.Features.Purchases.Orders.GetPurchaseOrdersSelect;
 using Application.Features.Purchases.PurchaseOrders.Create;
 using Application.Features.Purchases.PurchaseOrders.GetPurchaseOrderById;
 using Application.Features.Purchases.PurchaseOrders.GetPurchaseOrders;
@@ -95,5 +97,27 @@ public sealed class PurchaseOrdersEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.PurchaseOrdersCreate);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    IQueryHandler<
+                        GetPurchaseOrdersSelectQuery,
+                        IReadOnlyList<SelectOptionDto>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var query = new GetPurchaseOrdersSelectQuery(search);
+                    var result = await handler.Handle(query, ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.PurchaseOrdersRead);
     }
 }
