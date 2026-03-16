@@ -19,41 +19,49 @@ public sealed class Employee : Entity
 
     public Domain.Users.User? User { get; set; }
     public Domain.Branches.Branch? Branch { get; set; }
+
     public ICollection<EmployeeHistoryEntry> History { get; set; } =
         new List<EmployeeHistoryEntry>();
 
     public ICollection<Domain.PurchaseRequests.PurchaseRequest> PurchaseRequests { get; set; } =
         new List<Domain.PurchaseRequests.PurchaseRequest>();
+
     public ICollection<Domain.PayrollDetails.PayrollDetail> PayrollDetails { get; set; } =
         new List<Domain.PayrollDetails.PayrollDetail>();
+
     public ICollection<Domain.ServiceOrderTechnicians.ServiceOrderTechnician> ServiceOrderTechnicians { get; set; } =
         new List<Domain.ServiceOrderTechnicians.ServiceOrderTechnician>();
 
     public void RaiseCreated() =>
         Raise(
             new EmployeeCreatedDomainEvent(
-                Id,
-                FullName,
-                NationalId,
-                Email,
-                JobTitle,
-                BaseSalary,
-                BranchId,
-                HireDate,
-                IsActive
+                EmployeeId: Id,
+                FullName: FullName,
+                UserId: UserId,
+                NationalId: NationalId,
+                Email: Email,
+                JobTitle: JobTitle,
+                BaseSalary: BaseSalary,
+                BranchId: BranchId,
+                HireDate: HireDate,
+                TerminationDate: TerminationDate,
+                IsActive: IsActive
             )
         );
 
     public void RaiseUpdated() =>
         Raise(
             new EmployeeUpdatedDomainEvent(
-                Id,
-                FullName,
-                Email,
-                JobTitle,
-                BaseSalary,
-                BranchId,
-                IsActive
+                EmployeeId: Id,
+                FullName: FullName,
+                UserId: UserId,
+                NationalId: NationalId,
+                Email: Email,
+                JobTitle: JobTitle,
+                BaseSalary: BaseSalary,
+                BranchId: BranchId,
+                TerminationDate: TerminationDate,
+                IsActive: IsActive
             )
         );
 

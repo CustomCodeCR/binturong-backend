@@ -2,6 +2,7 @@ using Application.Abstractions.Projections;
 using Application.ReadModels.Payroll;
 using Domain.EmployeeHistory;
 using Domain.Employees;
+using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 
 namespace Infrastructure.Projections.Payroll;
@@ -15,7 +16,10 @@ internal sealed class EmployeeProjection
 {
     private readonly IMongoDatabase _db;
 
-    public EmployeeProjection(IMongoDatabase db) => _db = db;
+    public EmployeeProjection(IMongoDatabase db)
+    {
+        _db = db;
+    }
 
     public async Task ProjectAsync(EmployeeCreatedDomainEvent e, CancellationToken ct)
     {
@@ -27,17 +31,12 @@ internal sealed class EmployeeProjection
         {
             Id = $"employee:{e.EmployeeId}",
             EmployeeId = e.EmployeeId,
-
-            // Set this if the domain event already exposes UserId.
-            // Otherwise it will remain null until you add it to the event.
-            UserId = TryGetUserId(e),
-
+            UserId = e.UserId,
             BranchId = e.BranchId,
             BranchName = branchName,
-
             FullName = e.FullName,
-            NationalId = e.NationalId,
             Email = e.Email,
+            NationalId = e.NationalId,
             JobTitle = e.JobTitle,
             BaseSalary = e.BaseSalary,
 
@@ -50,7 +49,19 @@ internal sealed class EmployeeProjection
                 0,
                 DateTimeKind.Utc
             ),
-            TerminationDate = null,
+
+            TerminationDate = e.TerminationDate.HasValue
+                ? new DateTime(
+                    e.TerminationDate.Value.Year,
+                    e.TerminationDate.Value.Month,
+                    e.TerminationDate.Value.Day,
+                    0,
+                    0,
+                    0,
+                    DateTimeKind.Utc
+                )
+                : (DateTime?)null,
+
             IsActive = e.IsActive,
             History = [],
         };
@@ -64,33 +75,29 @@ internal sealed class EmployeeProjection
 
         var branchName = await ResolveBranchNameAsync(e.BranchId, ct);
 
+        DateTime? terminationDate = e.TerminationDate.HasValue
+            ? new DateTime(
+                e.TerminationDate.Value.Year,
+                e.TerminationDate.Value.Month,
+                e.TerminationDate.Value.Day,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc
+            )
+            : (DateTime?)null;
+
         var update = Builders<EmployeeReadModel>
-            .Update.Set(x => x.FullName, e.FullName)
+            .Update.Set(x => x.UserId, e.UserId)
+            .Set(x => x.FullName, e.FullName)
+            .Set(x => x.Email, e.Email)
+            .Set(x => x.NationalId, e.NationalId)
             .Set(x => x.JobTitle, e.JobTitle)
             .Set(x => x.BaseSalary, e.BaseSalary)
             .Set(x => x.BranchId, e.BranchId)
             .Set(x => x.BranchName, branchName)
-            .Set(x => x.IsActive, e.IsActive);
-
-        // If EmployeeUpdatedDomainEvent already has these fields, include them.
-        // If not, add them to the domain event first.
-        var userId = TryGetUserId(e);
-        if (userId.HasValue)
-        {
-            update = update.Set(x => x.UserId, userId.Value);
-        }
-
-        var email = TryGetEmail(e);
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            update = update.Set(x => x.Email, email);
-        }
-
-        var nationalId = TryGetNationalId(e);
-        if (!string.IsNullOrWhiteSpace(nationalId))
-        {
-            update = update.Set(x => x.NationalId, nationalId);
-        }
+            .Set(x => x.IsActive, e.IsActive)
+            .Set(x => x.TerminationDate, terminationDate);
 
         await col.UpdateOneAsync(
             x => x.Id == $"employee:{e.EmployeeId}",
@@ -153,11 +160,10 @@ internal sealed class EmployeeProjection
     private async Task<string?> ResolveBranchNameAsync(Guid? branchId, CancellationToken ct)
     {
         if (!branchId.HasValue)
-        {
             return null;
-        }
 
         var branches = _db.GetCollection<BranchLookupDocument>("branches");
+
         var branchDoc = await branches
             .Find(x => x.Id == $"branch:{branchId.Value}")
             .FirstOrDefaultAsync(ct);
@@ -165,30 +171,7 @@ internal sealed class EmployeeProjection
         return branchDoc?.Name;
     }
 
-    private static Guid? TryGetUserId(EmployeeCreatedDomainEvent e)
-    {
-        // Replace this with e.UserId if your event already has the property.
-        return null;
-    }
-
-    private static Guid? TryGetUserId(EmployeeUpdatedDomainEvent e)
-    {
-        // Replace this with e.UserId if your event already has the property.
-        return null;
-    }
-
-    private static string? TryGetEmail(EmployeeUpdatedDomainEvent e)
-    {
-        // Replace this with e.Email if your event already has the property.
-        return null;
-    }
-
-    private static string? TryGetNationalId(EmployeeUpdatedDomainEvent e)
-    {
-        // Replace this with e.NationalId if your event already has the property.
-        return null;
-    }
-
+    [BsonIgnoreExtraElements]
     private sealed class BranchLookupDocument
     {
         public string Id { get; init; } = default!;
