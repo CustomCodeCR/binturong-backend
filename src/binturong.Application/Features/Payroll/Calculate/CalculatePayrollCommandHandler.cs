@@ -15,6 +15,8 @@ namespace Application.Features.Payroll.Calculate;
 internal sealed class CalculatePayrollCommandHandler
     : ICommandHandler<CalculatePayrollCommand, Guid>
 {
+    private const decimal EmployeeCcssPercent = 10.83m;
+
     private readonly IApplicationDbContext _db;
     private readonly PayrollOptions _opt;
     private readonly ICommandBus _bus;
@@ -79,6 +81,7 @@ internal sealed class CalculatePayrollCommandHandler
             0,
             DateTimeKind.Utc
         );
+
         var endUtc = new DateTime(
             cmd.EndDate.Year,
             cmd.EndDate.Month,
@@ -120,12 +123,17 @@ internal sealed class CalculatePayrollCommandHandler
                 emp.UserId is not null
                 && salesMap.TryGetValue(emp.UserId.Value, out var salesTotal)
             )
+            {
                 commissions = salesTotal * (_opt.CommissionPercent / 100m);
+            }
 
             var overtimePay = overtimeHours * _opt.OvertimeHourlyRate;
-
             var gross = emp.BaseSalary + overtimePay + commissions;
-            var deductions = gross * (_opt.DeductionsPercent / 100m);
+
+            var employeeCcss = CalculateEmployeeCcss(gross);
+            var incomeTax = CalculateCostaRicaSalaryTax(gross);
+            var deductions = employeeCcss + incomeTax;
+
             var employerContrib = gross * (_opt.EmployerContribPercent / 100m);
             var net = gross - deductions;
 
@@ -179,5 +187,61 @@ internal sealed class CalculatePayrollCommandHandler
         );
 
         return Result.Success(payroll.Id);
+    }
+
+    private static decimal CalculateEmployeeCcss(decimal grossSalary)
+    {
+        if (grossSalary <= 0m)
+        {
+            return 0m;
+        }
+
+        return RoundCurrency(grossSalary * (EmployeeCcssPercent / 100m));
+    }
+
+    private static decimal CalculateCostaRicaSalaryTax(decimal grossSalary)
+    {
+        if (grossSalary <= 918000m)
+        {
+            return 0m;
+        }
+
+        decimal tax = 0m;
+
+        tax += CalculateBracketTax(grossSalary, 918000m, 1347000m, 0.10m);
+        tax += CalculateBracketTax(grossSalary, 1347000m, 2364000m, 0.15m);
+        tax += CalculateBracketTax(grossSalary, 2364000m, 4727000m, 0.20m);
+        tax += CalculateBracketTax(grossSalary, 4727000m, null, 0.25m);
+
+        return RoundCurrency(tax);
+    }
+
+    private static decimal CalculateBracketTax(
+        decimal grossSalary,
+        decimal lowerLimitExclusive,
+        decimal? upperLimitInclusive,
+        decimal rate
+    )
+    {
+        if (grossSalary <= lowerLimitExclusive)
+        {
+            return 0m;
+        }
+
+        var taxableAmount = upperLimitInclusive.HasValue
+            ? Math.Min(grossSalary, upperLimitInclusive.Value) - lowerLimitExclusive
+            : grossSalary - lowerLimitExclusive;
+
+        if (taxableAmount <= 0m)
+        {
+            return 0m;
+        }
+
+        return taxableAmount * rate;
+    }
+
+    private static decimal RoundCurrency(decimal amount)
+    {
+        return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
     }
 }
