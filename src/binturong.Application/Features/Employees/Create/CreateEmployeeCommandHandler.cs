@@ -62,6 +62,7 @@ internal sealed class CreateEmployeeCommandHandler : ICommandHandler<CreateEmplo
             UserId = cmd.UserId,
             BranchId = cmd.BranchId,
             FullName = cmd.FullName.Trim(),
+            Email = cmd.Email.Trim(),
             NationalId = nationalId,
             JobTitle = cmd.JobTitle.Trim(),
             BaseSalary = cmd.BaseSalary,

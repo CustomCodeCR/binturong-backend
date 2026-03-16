@@ -6,6 +6,7 @@ public sealed record CreateEmployeeCommand(
     Guid? UserId,
     Guid? BranchId,
     string FullName,
+    string Email,
     string NationalId,
     string JobTitle,
     decimal BaseSalary,

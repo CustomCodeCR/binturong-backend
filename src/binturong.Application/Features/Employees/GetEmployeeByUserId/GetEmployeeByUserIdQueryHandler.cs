@@ -7,17 +7,17 @@ using Application.ReadModels.Payroll;
 using MongoDB.Driver;
 using SharedKernel;
 
-namespace Application.Features.Employees.GetEmployeeById;
+namespace Application.Features.Employees.GetEmployeeByUserId;
 
-internal sealed class GetEmployeeByIdQueryHandler
-    : IQueryHandler<GetEmployeeByIdQuery, EmployeeReadModel>
+internal sealed class GetEmployeeByUserIdQueryHandler
+    : IQueryHandler<GetEmployeeByUserIdQuery, EmployeeReadModel>
 {
     private readonly IMongoDatabase _db;
     private readonly ICommandBus _bus;
     private readonly IRequestContext _request;
     private readonly ICurrentUser _currentUser;
 
-    public GetEmployeeByIdQueryHandler(
+    public GetEmployeeByUserIdQueryHandler(
         IMongoDatabase db,
         ICommandBus bus,
         IRequestContext request,
@@ -31,19 +31,21 @@ internal sealed class GetEmployeeByIdQueryHandler
     }
 
     public async Task<Result<EmployeeReadModel>> Handle(
-        GetEmployeeByIdQuery query,
+        GetEmployeeByUserIdQuery query,
         CancellationToken ct
     )
     {
         var col = _db.GetCollection<EmployeeReadModel>(MongoCollections.Employees);
-        var id = $"employee:{query.EmployeeId}";
 
-        var doc = await col.Find(x => x.Id == id).FirstOrDefaultAsync(ct);
+        var doc = await col.Find(x => x.UserId == query.UserId).FirstOrDefaultAsync(ct);
 
         if (doc is null)
         {
             return Result.Failure<EmployeeReadModel>(
-                Error.NotFound("Employees.NotFound", $"Employee '{query.EmployeeId}' not found")
+                Error.NotFound(
+                    "Employees.NotFoundByUserId",
+                    $"Employee with userId '{query.UserId}' not found"
+                )
             );
         }
 
@@ -51,10 +53,10 @@ internal sealed class GetEmployeeByIdQueryHandler
             _currentUser.UserId,
             "Employees",
             "Employee",
-            query.EmployeeId,
-            "EMPLOYEE_READ",
+            doc.EmployeeId,
+            "EMPLOYEE_READ_BY_USER_ID",
             string.Empty,
-            $"employeeId={query.EmployeeId}",
+            $"userId={query.UserId}",
             _request.IpAddress,
             _request.UserAgent,
             ct

@@ -7,6 +7,7 @@ public sealed record UpdateEmployeeCommand(
     Guid? UserId,
     Guid? BranchId,
     string FullName,
+    string Email,
     string JobTitle,
     decimal BaseSalary,
     DateOnly? TerminationDate,

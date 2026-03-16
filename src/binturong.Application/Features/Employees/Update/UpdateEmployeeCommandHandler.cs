@@ -60,6 +60,7 @@ internal sealed class UpdateEmployeeCommandHandler : ICommandHandler<UpdateEmplo
         employee.UserId = cmd.UserId;
         employee.BranchId = cmd.BranchId;
         employee.FullName = cmd.FullName.Trim();
+        employee.Email = cmd.Email.Trim();
         employee.JobTitle = cmd.JobTitle.Trim();
         employee.BaseSalary = cmd.BaseSalary;
         employee.TerminationDate = cmd.TerminationDate;

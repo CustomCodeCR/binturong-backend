@@ -6,6 +6,7 @@ using Application.Features.Employees.Attendance.CheckOut;
 using Application.Features.Employees.Create;
 using Application.Features.Employees.Delete;
 using Application.Features.Employees.GetEmployeeById;
+using Application.Features.Employees.GetEmployeeByUserId;
 using Application.Features.Employees.GetEmployees;
 using Application.Features.Employees.GetEmployeesSelect;
 using Application.Features.Employees.Update;
@@ -27,16 +28,46 @@ public sealed class EmployeesEndpoints : IEndpoint
                     int? page,
                     int? pageSize,
                     string? search,
+                    Guid? userId,
                     IQueryHandler<GetEmployeesQuery, IReadOnlyList<EmployeeReadModel>> handler,
                     CancellationToken ct
                 ) =>
                 {
-                    var result = await handler.Handle(
-                        new GetEmployeesQuery(page ?? 1, pageSize ?? 50, search),
-                        ct
+                    var currentPage = page ?? 1;
+                    var currentPageSize = pageSize ?? 50;
+
+                    var skip = (currentPage - 1) * currentPageSize;
+                    var take = currentPageSize;
+
+                    var query = new GetEmployeesQuery(
+                        Search: search,
+                        UserId: userId,
+                        Skip: skip,
+                        Take: take
                     );
+
+                    var result = await handler.Handle(query, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.EmployeesRead);
+
+        group
+            .MapGet(
+                "/by-user/{userId:guid}",
+                async (
+                    Guid userId,
+                    IQueryHandler<GetEmployeeByUserIdQuery, EmployeeReadModel> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetEmployeeByUserIdQuery(userId), ct);
+
+                    return result.IsFailure
+                        ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
                 }
             )
@@ -52,6 +83,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new GetEmployeeByIdQuery(id), ct);
+
                     return result.IsFailure
                         ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
@@ -73,6 +105,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                         BranchId: req.BranchId,
                         FullName: req.FullName,
                         NationalId: req.NationalId,
+                        Email: req.Email,
                         JobTitle: req.JobTitle,
                         BaseSalary: req.BaseSalary,
                         HireDate: req.HireDate,
@@ -81,6 +114,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                     );
 
                     var result = await handler.Handle(cmd, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.Created(
@@ -106,6 +140,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                         UserId: req.UserId,
                         BranchId: req.BranchId,
                         FullName: req.FullName,
+                        Email: req.Email,
                         JobTitle: req.JobTitle,
                         BaseSalary: req.BaseSalary,
                         TerminationDate: req.TerminationDate,
@@ -113,6 +148,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                     );
 
                     var result = await handler.Handle(cmd, ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -130,6 +166,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new DeleteEmployeeCommand(id), ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -147,6 +184,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new EmployeeCheckInCommand(id), ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -164,6 +202,7 @@ public sealed class EmployeesEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new EmployeeCheckOutCommand(id), ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();

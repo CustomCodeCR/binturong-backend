@@ -4,6 +4,7 @@ using Application.Abstractions.Web;
 using Application.Features.Common.Audit;
 using Application.ReadModels.Common;
 using Application.ReadModels.Payroll;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SharedKernel;
 
@@ -37,26 +38,33 @@ internal sealed class GetEmployeesQueryHandler
     {
         var col = _db.GetCollection<EmployeeReadModel>(MongoCollections.Employees);
 
-        var filter = Builders<EmployeeReadModel>.Filter.Empty;
+        var filters = new List<FilterDefinition<EmployeeReadModel>>();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var s = query.Search.Trim();
-            filter = Builders<EmployeeReadModel>.Filter.Or(
-                Builders<EmployeeReadModel>.Filter.Regex(
-                    x => x.FullName,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
-                ),
-                Builders<EmployeeReadModel>.Filter.Regex(
-                    x => x.NationalId,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
-                ),
-                Builders<EmployeeReadModel>.Filter.Regex(
-                    x => x.JobTitle,
-                    new MongoDB.Bson.BsonRegularExpression(s, "i")
+            var regex = new BsonRegularExpression(s, "i");
+
+            filters.Add(
+                Builders<EmployeeReadModel>.Filter.Or(
+                    Builders<EmployeeReadModel>.Filter.Regex(x => x.FullName, regex),
+                    Builders<EmployeeReadModel>.Filter.Regex(x => x.NationalId, regex),
+                    Builders<EmployeeReadModel>.Filter.Regex(x => x.Email, regex),
+                    Builders<EmployeeReadModel>.Filter.Regex(x => x.JobTitle, regex),
+                    Builders<EmployeeReadModel>.Filter.Regex(x => x.BranchName, regex)
                 )
             );
         }
+
+        if (query.UserId.HasValue)
+        {
+            filters.Add(Builders<EmployeeReadModel>.Filter.Eq(x => x.UserId, query.UserId.Value));
+        }
+
+        var filter =
+            filters.Count > 0
+                ? Builders<EmployeeReadModel>.Filter.And(filters)
+                : Builders<EmployeeReadModel>.Filter.Empty;
 
         var docs = await col.Find(filter).Skip(query.Skip).Limit(query.Take).ToListAsync(ct);
 
@@ -67,7 +75,7 @@ internal sealed class GetEmployeesQueryHandler
             null,
             "EMPLOYEE_LIST_READ",
             string.Empty,
-            $"search={query.Search}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
+            $"search={query.Search}; userId={query.UserId}; skip={query.Skip}; take={query.Take}; count={docs.Count}",
             _request.IpAddress,
             _request.UserAgent,
             ct
