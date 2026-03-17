@@ -1,5 +1,6 @@
 using Application.Abstractions.Projections;
 using Application.ReadModels.Common;
+using Application.ReadModels.CRM;
 using Application.ReadModels.Sales;
 using Domain.ContractBillingMilestones;
 using Domain.Contracts;
@@ -20,7 +21,10 @@ internal sealed class ContractProjection
 {
     private readonly IMongoDatabase _db;
 
-    public ContractProjection(IMongoDatabase db) => _db = db;
+    public ContractProjection(IMongoDatabase db)
+    {
+        _db = db;
+    }
 
     public Task ProjectAsync(ContractCreatedDomainEvent e, CancellationToken ct) =>
         UpsertHeaderAsync(
@@ -56,6 +60,7 @@ internal sealed class ContractProjection
     {
         var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
         var id = $"contract:{e.ContractId}";
+
         await col.DeleteOneAsync(x => x.Id == id, ct);
     }
 
@@ -96,7 +101,7 @@ internal sealed class ContractProjection
             m => m.MilestoneId == e.MilestoneId
         );
 
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
+        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
     }
 
     public async Task ProjectAsync(ContractRenewedDomainEvent e, CancellationToken ct)
@@ -110,7 +115,7 @@ internal sealed class ContractProjection
             .Set(x => x.EndDate, ToUtcDate(e.NewEndDate))
             .Set(x => x.Status, "Active");
 
-        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false }, ct);
     }
 
     public async Task ProjectAsync(ContractExpiryNoticeSentDomainEvent e, CancellationToken ct)
@@ -120,7 +125,8 @@ internal sealed class ContractProjection
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
         var update = Builders<ContractReadModel>.Update.Set(x => x.Status, "ExpiringSoon");
-        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false }, ct);
     }
 
     public async Task ProjectAsync(ContractCreatedFromQuoteDomainEvent e, CancellationToken ct)
@@ -130,7 +136,16 @@ internal sealed class ContractProjection
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
         var update = Builders<ContractReadModel>
-            .Update.Set(x => x.QuoteId, e.QuoteId)
+            .Update.SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.ContractId, e.ContractId)
+            .SetOnInsert(x => x.Code, string.Empty)
+            .SetOnInsert(x => x.ClientId, Guid.Empty)
+            .SetOnInsert(x => x.ClientName, string.Empty)
+            .SetOnInsert(x => x.SalesOrderId, null)
+            .SetOnInsert(x => x.Description, null)
+            .SetOnInsert(x => x.Notes, null)
+            .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.StartDate, ToUtcDate(e.StartDate))
             .Set(x => x.EndDate, e.EndDate is null ? null : ToUtcDate(e.EndDate.Value))
             .Set(x => x.Status, "Active");
@@ -153,27 +168,28 @@ internal sealed class ContractProjection
     )
     {
         var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
-
         var id = $"contract:{contractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
+        var clientName = await ResolveClientNameAsync(clientId, ct);
+
         var update = Builders<ContractReadModel>
-            .Update
-            // Only these should be OnInsert
-            .SetOnInsert(x => x.Id, id)
+            .Update.SetOnInsert(x => x.Id, id)
             .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
-            // ALWAYS set these (fix for missing ContractId / SalesOrderId)
             .Set(x => x.ContractId, contractId)
             .Set(x => x.Code, code)
             .Set(x => x.ClientId, clientId)
-            .Set(x => x.ClientName, string.Empty)
+            .Set(x => x.ClientName, clientName)
             .Set(x => x.QuoteId, quoteId)
             .Set(x => x.SalesOrderId, salesOrderId)
             .Set(x => x.StartDate, ToUtcDate(startDate))
             .Set(x => x.EndDate, endDate is null ? null : ToUtcDate(endDate.Value))
             .Set(x => x.Status, status)
-            .Set(x => x.Description, string.IsNullOrWhiteSpace(description) ? null : description)
-            .Set(x => x.Notes, string.IsNullOrWhiteSpace(notes) ? null : notes);
+            .Set(
+                x => x.Description,
+                string.IsNullOrWhiteSpace(description) ? null : description.Trim()
+            )
+            .Set(x => x.Notes, string.IsNullOrWhiteSpace(notes) ? null : notes.Trim());
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -195,12 +211,12 @@ internal sealed class ContractProjection
         var id = $"contract:{contractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
-        // idempotent: remove existing
         var pull = Builders<ContractReadModel>.Update.PullFilter(
             x => x.Milestones,
             m => m.MilestoneId == milestoneId
         );
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
+
+        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
 
         var milestone = new ContractMilestoneReadModel
         {
@@ -214,7 +230,29 @@ internal sealed class ContractProjection
         };
 
         var push = Builders<ContractReadModel>.Update.Push(x => x.Milestones, milestone);
-        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+
+        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = false }, ct);
+    }
+
+    private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)
+    {
+        var clients = _db.GetCollection<ClientReadModel>(MongoCollections.Clients);
+
+        var client = await clients.Find(x => x.ClientId == clientId).FirstOrDefaultAsync(ct);
+
+        if (client is null)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(client.TradeName))
+            return client.TradeName.Trim();
+
+        if (!string.IsNullOrWhiteSpace(client.ContactName))
+            return client.ContactName.Trim();
+
+        if (!string.IsNullOrWhiteSpace(client.Identification))
+            return client.Identification.Trim();
+
+        return string.Empty;
     }
 
     private static DateTime ToUtcDate(DateOnly d) =>

@@ -35,7 +35,7 @@ public sealed class InvoiceReadModel
     public string? PdfS3Key { get; init; }
     public string? XmlS3Key { get; init; }
 
-    public IReadOnlyList<InvoiceLineReadModel> Lines { get; init; } = [];
+    public IList<InvoiceLineReadModel> Lines { get; init; } = [];
 
     // Payment summary for CRM/ERP screens
     public decimal PaidAmount { get; init; }
