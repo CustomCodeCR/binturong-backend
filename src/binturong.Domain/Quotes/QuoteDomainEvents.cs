@@ -16,6 +16,7 @@ public sealed record QuoteCreatedDomainEvent(
     decimal Taxes,
     decimal Discounts,
     decimal Total,
+    string? Notes,
     DateTime CreatedAt,
     DateTime UpdatedAt
 ) : IDomainEvent;

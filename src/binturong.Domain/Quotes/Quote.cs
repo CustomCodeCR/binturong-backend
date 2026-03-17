@@ -51,6 +51,7 @@ public sealed class Quote : Entity
                 Taxes,
                 Discounts,
                 Total,
+                Notes,
                 CreatedAt,
                 UpdatedAt
             )
