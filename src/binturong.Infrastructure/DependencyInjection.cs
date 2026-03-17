@@ -13,6 +13,8 @@ using Application.Abstractions.Projections;
 using Application.Abstractions.Security;
 using Application.Abstractions.Storage;
 using Application.Options;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using Infrastructure.Authentication;
 using Infrastructure.Authorization;
 using Infrastructure.Background;
@@ -232,7 +234,8 @@ namespace Infrastructure
             services.AddScoped<IEmailSender, SmtpEmailSender>();
             services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
 
-            services.AddScoped<IPdfGenerator, IronPdfGenerator>();
+            services.AddSingleton<IConverter>(_ => new SynchronizedConverter(new PdfTools()));
+            services.AddScoped<IPdfGenerator, DinkToPdfGenerator>();
             services.AddScoped<IExcelExporter, ClosedXmlExcelExporter>();
 
             return services;
@@ -355,7 +358,6 @@ namespace Infrastructure.EInvoicing
         }
     }
 
-    // FIX #2: StoredDocument => (Key, Size)
     internal sealed class StubDocumentStorage : IDocumentStorage
     {
         public Task<StoredDocument> PutAsync(
@@ -369,7 +371,6 @@ namespace Infrastructure.EInvoicing
         }
     }
 
-    // FIX #1: RenderedElectronicDocument => ctor posicional (sin named args)
     internal sealed class StubElectronicDocumentRenderer : IElectronicDocumentRenderer
     {
         public Task<RenderedElectronicDocument> RenderInvoiceAsync(
@@ -393,12 +394,12 @@ namespace Infrastructure.EInvoicing
             var pdfBytes = Encoding.UTF8.GetBytes($"%PDF-1.4\n% Stub PDF for {prefix}:{id}\n");
 
             return new RenderedElectronicDocument(
-                $"{prefix}_{id:N}.xml", // XmlFileName
-                $"{prefix}_{id:N}.pdf", // PdfFileName
-                "application/xml", // XmlContentType
-                "application/pdf", // PdfContentType
-                xmlBytes, // XmlBytes
-                pdfBytes // PdfBytes
+                $"{prefix}_{id:N}.xml",
+                $"{prefix}_{id:N}.pdf",
+                "application/xml",
+                "application/pdf",
+                xmlBytes,
+                pdfBytes
             );
         }
     }

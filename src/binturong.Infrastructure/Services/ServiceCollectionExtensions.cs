@@ -83,7 +83,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRealtimeNotifier, SignalRNotifier>();
 
         // Documents
-        services.AddScoped<IPdfGenerator, IronPdfGenerator>();
+        services.AddScoped<IPdfGenerator, DinkToPdfGenerator>();
         services.AddScoped<IExcelExporter, ClosedXmlExcelExporter>();
 
         return services;
