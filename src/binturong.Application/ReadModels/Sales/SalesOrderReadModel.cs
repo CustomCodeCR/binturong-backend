@@ -15,6 +15,7 @@ public sealed class SalesOrderReadModel
     public string? BranchName { get; init; }
 
     public Guid? SellerUserId { get; init; }
+    public string? SellerName { get; init; }
 
     public DateTime OrderDate { get; init; }
     public string Status { get; init; } = default!;

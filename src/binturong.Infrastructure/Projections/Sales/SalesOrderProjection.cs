@@ -1,6 +1,10 @@
 using Application.Abstractions.Projections;
 using Application.ReadModels.Common;
+using Application.ReadModels.CRM;
+using Application.ReadModels.Inventory;
+using Application.ReadModels.MasterData;
 using Application.ReadModels.Sales;
+using Application.ReadModels.Security;
 using Domain.SalesOrders;
 using MongoDB.Driver;
 
@@ -30,7 +34,15 @@ internal sealed class SalesOrderProjection
 
     private async Task UpsertHeaderAsync(SalesOrderCreatedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+
+        var clientName = await ResolveClientNameAsync(e.ClientId, ct);
+        var branchName = e.BranchId.HasValue
+            ? await ResolveBranchNameAsync(e.BranchId.Value, ct)
+            : null;
+        var sellerName = e.SellerUserId.HasValue
+            ? await ResolveUserNameAsync(e.SellerUserId.Value, ct)
+            : null;
 
         var id = $"so:{e.SalesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
@@ -38,15 +50,15 @@ internal sealed class SalesOrderProjection
         var update = Builders<SalesOrderReadModel>
             .Update.SetOnInsert(x => x.Id, id)
             .SetOnInsert(x => x.Lines, new List<SalesOrderLineReadModel>())
-            // ALWAYS set SalesOrderId (fix)
             .Set(x => x.SalesOrderId, e.SalesOrderId)
             .Set(x => x.Code, e.Code)
             .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.ClientId, e.ClientId)
-            .Set(x => x.ClientName, string.Empty)
+            .Set(x => x.ClientName, clientName)
             .Set(x => x.BranchId, e.BranchId)
-            .Set(x => x.BranchName, null)
+            .Set(x => x.BranchName, branchName)
             .Set(x => x.SellerUserId, e.SellerUserId)
+            .Set(x => x.SellerName, sellerName)
             .Set(x => x.OrderDate, e.OrderDateUtc)
             .Set(x => x.Status, e.Status)
             .Set(x => x.Currency, e.Currency)
@@ -59,7 +71,7 @@ internal sealed class SalesOrderProjection
             .Set(x => x.CreatedAt, e.CreatedAtUtc)
             .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
 
-        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private async Task SetQuoteAsync(
@@ -69,7 +81,7 @@ internal sealed class SalesOrderProjection
         CancellationToken ct
     )
     {
-        var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
 
         var id = $"so:{salesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
@@ -78,7 +90,7 @@ internal sealed class SalesOrderProjection
             .Update.Set(x => x.QuoteId, quoteId)
             .Set(x => x.UpdatedAt, updatedAtUtc);
 
-        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private async Task SetConfirmedAsync(
@@ -89,17 +101,20 @@ internal sealed class SalesOrderProjection
         CancellationToken ct
     )
     {
-        var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+
+        var sellerName = await ResolveUserNameAsync(sellerUserId, ct);
 
         var id = $"so:{salesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
 
         var update = Builders<SalesOrderReadModel>
             .Update.Set(x => x.SellerUserId, sellerUserId)
+            .Set(x => x.SellerName, sellerName)
             .Set(x => x.Status, status)
             .Set(x => x.UpdatedAt, updatedAtUtc);
 
-        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private async Task AddOrReplaceLineAsync(
@@ -107,7 +122,9 @@ internal sealed class SalesOrderProjection
         CancellationToken ct
     )
     {
-        var col = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+
+        var productName = await ResolveProductNameAsync(e.ProductId, ct);
 
         var id = $"so:{e.SalesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
@@ -116,7 +133,7 @@ internal sealed class SalesOrderProjection
         {
             SalesOrderDetailId = e.SalesOrderDetailId,
             ProductId = e.ProductId,
-            ProductName = string.Empty,
+            ProductName = productName,
             Quantity = e.Quantity,
             UnitPrice = e.UnitPrice,
             DiscountPerc = e.DiscountPerc,
@@ -129,12 +146,93 @@ internal sealed class SalesOrderProjection
             l => l.SalesOrderDetailId == line.SalesOrderDetailId
         );
 
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
+        await salesOrders.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = true }, ct);
 
         var push = Builders<SalesOrderReadModel>
             .Update.Push(x => x.Lines, line)
             .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
 
-        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+        await salesOrders.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)
+    {
+        var clients = _db.GetCollection<ClientReadModel>(MongoCollections.Clients);
+
+        var client = await clients.Find(x => x.ClientId == clientId).FirstOrDefaultAsync(ct);
+
+        if (client is null)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(client.TradeName))
+        {
+            return client.TradeName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(client.ContactName))
+        {
+            return client.ContactName;
+        }
+
+        return client.Identification;
+    }
+
+    private async Task<string?> ResolveBranchNameAsync(Guid branchId, CancellationToken ct)
+    {
+        var branches = _db.GetCollection<BranchReadModel>(MongoCollections.Branches);
+
+        var branch = await branches.Find(x => x.BranchId == branchId).FirstOrDefaultAsync(ct);
+
+        if (branch is null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(branch.Code) && !string.IsNullOrWhiteSpace(branch.Name))
+        {
+            return $"{branch.Code} - {branch.Name}";
+        }
+
+        return branch.Name;
+    }
+
+    private async Task<string?> ResolveUserNameAsync(Guid userId, CancellationToken ct)
+    {
+        var users = _db.GetCollection<UserReadModel>(MongoCollections.Users);
+
+        var user = await users.Find(x => x.UserId == userId).FirstOrDefaultAsync(ct);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.Username))
+        {
+            return user.Username;
+        }
+
+        return user.Email;
+    }
+
+    private async Task<string> ResolveProductNameAsync(Guid productId, CancellationToken ct)
+    {
+        var products = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
+
+        var product = await products.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
+
+        if (product is null)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(product.Name))
+        {
+            return product.Name;
+        }
+
+        return product.SKU;
     }
 }
