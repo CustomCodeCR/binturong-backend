@@ -1,10 +1,12 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.SalesOrders.Confirm;
 using Application.Features.SalesOrders.ConvertFromQuote;
 using Application.Features.SalesOrders.Create;
 using Application.Features.SalesOrders.GetSalesOrderById;
 using Application.Features.SalesOrders.GetSalesOrders;
+using Application.Features.SalesOrders.GetSalesOrdersSelect;
 using Application.ReadModels.Sales;
 using Application.Security.Scopes;
 
@@ -146,5 +148,26 @@ public sealed class SalesOrdersEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.SalesOrdersConfirm);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    IQueryHandler<
+                        GetSalesOrdersSelectQuery,
+                        IReadOnlyList<SelectOptionDto>
+                    > handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetSalesOrdersSelectQuery(search), ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.SalesOrdersRead);
     }
 }

@@ -1,8 +1,6 @@
-namespace Application.ReadModels.Sales;
-
 public sealed class ContractReadModel
 {
-    public string Id { get; init; } = default!; // "contract:{ContractId}"
+    public string Id { get; init; } = default!;
     public Guid ContractId { get; init; }
     public string Code { get; init; } = default!;
 
@@ -12,7 +10,6 @@ public sealed class ContractReadModel
     public Guid? QuoteId { get; init; }
     public Guid? SalesOrderId { get; init; }
 
-    // store DateOnly as DateTime in Mongo (UTC midnight)
     public DateTime StartDate { get; init; }
     public DateTime? EndDate { get; init; }
 
@@ -20,7 +17,8 @@ public sealed class ContractReadModel
     public string? Description { get; init; }
     public string? Notes { get; init; }
 
-    public IReadOnlyList<ContractMilestoneReadModel> Milestones { get; init; } = [];
+    public List<ContractMilestoneReadModel> Milestones { get; init; } = [];
+    public List<ContractAttachmentReadModel> Attachments { get; init; } = [];
 }
 
 public sealed class ContractMilestoneReadModel
@@ -32,4 +30,14 @@ public sealed class ContractMilestoneReadModel
     public DateTime ScheduledDate { get; init; }
     public bool IsBilled { get; init; }
     public Guid? InvoiceId { get; init; }
+}
+
+public sealed class ContractAttachmentReadModel
+{
+    public Guid AttachmentId { get; init; }
+    public string FileName { get; init; } = default!;
+    public string ContentType { get; init; } = default!;
+    public string StorageKey { get; init; } = default!;
+    public long Size { get; init; }
+    public DateTime UploadedAt { get; init; }
 }

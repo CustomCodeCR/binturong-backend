@@ -73,19 +73,27 @@ public sealed class ContractRenewalWorker : BackgroundService
                 var to =
                     _emailOptions.ContractsEmail ?? _emailOptions.AdminEmail ?? "contracts@local";
 
+                var contractId = c.Id;
+                var clientId = c.ClientId;
+                var endDate = c.EndDate;
+                var capturedNowUtc = nowUtc;
+
                 await jobs.EnqueueAsync(
                     async (sp, token) =>
                     {
-                        var email = sp.GetRequiredService<IEmailSender>();
+                        using var jobScope = sp.CreateScope();
+
+                        var email = jobScope.ServiceProvider.GetRequiredService<IEmailSender>();
+
                         await email.SendAsync(
                             to,
                             "Alerta: contrato por vencer",
                             $@"
 <h3>Contrato por vencer</h3>
-<p><b>ContractId:</b> {c.Id}</p>
-<p><b>ClientId:</b> {c.ClientId}</p>
-<p><b>EndDate:</b> {c.EndDate}</p>
-<p><b>At:</b> {nowUtc:O}</p>
+<p><b>ContractId:</b> {contractId}</p>
+<p><b>ClientId:</b> {clientId}</p>
+<p><b>EndDate:</b> {endDate}</p>
+<p><b>At:</b> {capturedNowUtc:O}</p>
 ",
                             token
                         );
@@ -115,20 +123,29 @@ public sealed class ContractRenewalWorker : BackgroundService
                 var to =
                     _emailOptions.ContractsEmail ?? _emailOptions.AdminEmail ?? "contracts@local";
 
+                var contractId = c.Id;
+                var clientId = c.ClientId;
+                var newStart = c.StartDate;
+                var newEnd = c.EndDate;
+                var capturedNowUtc = nowUtc;
+
                 await jobs.EnqueueAsync(
                     async (sp, token) =>
                     {
-                        var email = sp.GetRequiredService<IEmailSender>();
+                        using var jobScope = sp.CreateScope();
+
+                        var email = jobScope.ServiceProvider.GetRequiredService<IEmailSender>();
+
                         await email.SendAsync(
                             to,
                             "Contrato renovado automáticamente",
                             $@"
 <h3>Renovación automática</h3>
-<p><b>ContractId:</b> {c.Id}</p>
-<p><b>ClientId:</b> {c.ClientId}</p>
-<p><b>New Start:</b> {c.StartDate}</p>
-<p><b>New End:</b> {c.EndDate}</p>
-<p><b>At:</b> {nowUtc:O}</p>
+<p><b>ContractId:</b> {contractId}</p>
+<p><b>ClientId:</b> {clientId}</p>
+<p><b>New Start:</b> {newStart}</p>
+<p><b>New End:</b> {newEnd}</p>
+<p><b>At:</b> {capturedNowUtc:O}</p>
 ",
                             token
                         );

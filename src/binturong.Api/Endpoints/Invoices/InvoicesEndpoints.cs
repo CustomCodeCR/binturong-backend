@@ -1,11 +1,13 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Invoices.ConvertFromQuote;
 using Application.Features.Invoices.Create;
 using Application.Features.Invoices.Delete;
 using Application.Features.Invoices.Emit;
 using Application.Features.Invoices.GetInvoiceById;
 using Application.Features.Invoices.GetInvoices;
+using Application.Features.Invoices.GetInvoicesSelect;
 using Application.Features.Invoices.Update;
 using Application.ReadModels.Sales;
 using Application.Security.Scopes;
@@ -261,5 +263,23 @@ public sealed class InvoicesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.InvoicesConvertFromQuote);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    IQueryHandler<GetInvoicesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetInvoicesSelectQuery(search), ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.InvoicesRead);
     }
 }

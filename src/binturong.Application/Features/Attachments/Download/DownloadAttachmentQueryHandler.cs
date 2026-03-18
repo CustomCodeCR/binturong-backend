@@ -35,7 +35,8 @@ internal sealed class DownloadAttachmentQueryHandler
         return module switch
         {
             "suppliers" => await HandleSupplierAttachment(query.AttachmentId, ct),
-            "customers" or "clients" => await HandleClientAttachment(query.AttachmentId, ct),
+            "clients" => await HandleClientAttachment(query.AttachmentId, ct),
+            "contracts" => await HandleContractAttachment(query.AttachmentId, ct),
             _ => Result.Failure<DownloadAttachmentResponse>(
                 Error.Validation(
                     "Attachments.Module.Invalid",
@@ -83,6 +84,27 @@ internal sealed class DownloadAttachmentQueryHandler
         }
 
         var url = await _storage.GetReadUrlAsync(attachment.FileS3Key, ct);
+
+        return Result.Success(new DownloadAttachmentResponse(attachment.FileName, url));
+    }
+
+    private async Task<Result<DownloadAttachmentResponse>> HandleContractAttachment(
+        Guid attachmentId,
+        CancellationToken ct
+    )
+    {
+        var attachment = await _db
+            .ContractAttachments.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == attachmentId, ct);
+
+        if (attachment is null)
+        {
+            return Result.Failure<DownloadAttachmentResponse>(
+                Error.NotFound("Attachments.NotFound", "Attachment was not found.")
+            );
+        }
+
+        var url = await _storage.GetReadUrlAsync(attachment.StorageKey, ct);
 
         return Result.Success(new DownloadAttachmentResponse(attachment.FileName, url));
     }

@@ -20,20 +20,41 @@ internal sealed class DeleteContractAttachmentCommandHandler
 
     public async Task<Result> Handle(DeleteContractAttachmentCommand cmd, CancellationToken ct)
     {
+        if (cmd.ContractId == Guid.Empty)
+        {
+            return Result.Failure(
+                Error.Validation("Contracts.IdRequired", "ContractId is required.")
+            );
+        }
+
+        if (cmd.AttachmentId == Guid.Empty)
+        {
+            return Result.Failure(
+                Error.Validation("Contracts.Attachments.IdRequired", "AttachmentId is required.")
+            );
+        }
+
         var att = await _db.ContractAttachments.FirstOrDefaultAsync(
             x => x.ContractId == cmd.ContractId && x.Id == cmd.AttachmentId,
             ct
         );
 
         if (att is null)
+        {
             return Result.Failure(
                 Error.NotFound(
                     "Contracts.Attachments.NotFound",
                     $"Attachment '{cmd.AttachmentId}' not found for contract '{cmd.ContractId}'."
                 )
             );
+        }
 
-        await _storage.DeleteAsync(att.StorageKey, ct);
+        if (!string.IsNullOrWhiteSpace(att.StorageKey))
+        {
+            await _storage.DeleteAsync(att.StorageKey, ct);
+        }
+
+        att.RaiseDeleted();
 
         _db.ContractAttachments.Remove(att);
         await _db.SaveChangesAsync(ct);

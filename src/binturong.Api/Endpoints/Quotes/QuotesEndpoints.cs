@@ -1,11 +1,13 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Quotes.Accept;
 using Application.Features.Quotes.AddDetail;
 using Application.Features.Quotes.Create;
 using Application.Features.Quotes.Expire;
 using Application.Features.Quotes.GetQuoteById;
 using Application.Features.Quotes.GetQuotes;
+using Application.Features.Quotes.GetQuotesSelect;
 using Application.Features.Quotes.Reject;
 using Application.Features.Quotes.Send;
 using Application.ReadModels.Sales;
@@ -196,5 +198,23 @@ public sealed class QuotesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.QuotesExpire);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    IQueryHandler<GetQuotesSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetQuotesSelectQuery(search), ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.QuotesRead);
     }
 }

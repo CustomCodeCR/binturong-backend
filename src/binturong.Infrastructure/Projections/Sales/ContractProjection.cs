@@ -1,7 +1,6 @@
 using Application.Abstractions.Projections;
 using Application.ReadModels.Common;
 using Application.ReadModels.CRM;
-using Application.ReadModels.Sales;
 using Domain.ContractBillingMilestones;
 using Domain.Contracts;
 using MongoDB.Driver;
@@ -17,7 +16,9 @@ internal sealed class ContractProjection
         IProjector<ContractMilestoneRemovedDomainEvent>,
         IProjector<ContractRenewedDomainEvent>,
         IProjector<ContractExpiryNoticeSentDomainEvent>,
-        IProjector<ContractCreatedFromQuoteDomainEvent>
+        IProjector<ContractCreatedFromQuoteDomainEvent>,
+        IProjector<ContractAttachmentUploadedDomainEvent>,
+        IProjector<ContractAttachmentDeletedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -101,7 +102,7 @@ internal sealed class ContractProjection
             m => m.MilestoneId == e.MilestoneId
         );
 
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
+        await col.UpdateOneAsync(filter, pull, cancellationToken: ct);
     }
 
     public async Task ProjectAsync(ContractRenewedDomainEvent e, CancellationToken ct)
@@ -145,12 +146,39 @@ internal sealed class ContractProjection
             .SetOnInsert(x => x.Description, null)
             .SetOnInsert(x => x.Notes, null)
             .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            .SetOnInsert(x => x.Attachments, new List<ContractAttachmentReadModel>())
             .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.StartDate, ToUtcDate(e.StartDate))
             .Set(x => x.EndDate, e.EndDate is null ? null : ToUtcDate(e.EndDate.Value))
             .Set(x => x.Status, "Active");
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public Task ProjectAsync(ContractAttachmentUploadedDomainEvent e, CancellationToken ct) =>
+        UpsertAttachmentAsync(
+            e.ContractId,
+            e.AttachmentId,
+            e.FileName,
+            e.ContentType,
+            e.SizeBytes,
+            e.StoragePath,
+            e.UploadedAtUtc,
+            ct
+        );
+
+    public async Task ProjectAsync(ContractAttachmentDeletedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
+        var id = $"contract:{e.ContractId}";
+        var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
+
+        var pull = Builders<ContractReadModel>.Update.PullFilter(
+            x => x.Attachments,
+            a => a.AttachmentId == e.AttachmentId
+        );
+
+        await col.UpdateOneAsync(filter, pull, cancellationToken: ct);
     }
 
     private async Task UpsertHeaderAsync(
@@ -176,6 +204,7 @@ internal sealed class ContractProjection
         var update = Builders<ContractReadModel>
             .Update.SetOnInsert(x => x.Id, id)
             .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            .SetOnInsert(x => x.Attachments, new List<ContractAttachmentReadModel>())
             .Set(x => x.ContractId, contractId)
             .Set(x => x.Code, code)
             .Set(x => x.ClientId, clientId)
@@ -211,12 +240,24 @@ internal sealed class ContractProjection
         var id = $"contract:{contractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
+        var ensureDocument = Builders<ContractReadModel>
+            .Update.SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.ContractId, contractId)
+            .SetOnInsert(x => x.Code, string.Empty)
+            .SetOnInsert(x => x.ClientId, Guid.Empty)
+            .SetOnInsert(x => x.ClientName, string.Empty)
+            .SetOnInsert(x => x.Status, string.Empty)
+            .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            .SetOnInsert(x => x.Attachments, new List<ContractAttachmentReadModel>());
+
+        await col.UpdateOneAsync(filter, ensureDocument, new UpdateOptions { IsUpsert = true }, ct);
+
         var pull = Builders<ContractReadModel>.Update.PullFilter(
             x => x.Milestones,
             m => m.MilestoneId == milestoneId
         );
 
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
+        await col.UpdateOneAsync(filter, pull, cancellationToken: ct);
 
         var milestone = new ContractMilestoneReadModel
         {
@@ -231,7 +272,57 @@ internal sealed class ContractProjection
 
         var push = Builders<ContractReadModel>.Update.Push(x => x.Milestones, milestone);
 
-        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = false }, ct);
+        await col.UpdateOneAsync(filter, push, cancellationToken: ct);
+    }
+
+    private async Task UpsertAttachmentAsync(
+        Guid contractId,
+        Guid attachmentId,
+        string fileName,
+        string contentType,
+        long sizeBytes,
+        string storagePath,
+        DateTime uploadedAtUtc,
+        CancellationToken ct
+    )
+    {
+        var col = _db.GetCollection<ContractReadModel>(MongoCollections.Contracts);
+
+        var id = $"contract:{contractId}";
+        var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
+
+        var ensureDocument = Builders<ContractReadModel>
+            .Update.SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.ContractId, contractId)
+            .SetOnInsert(x => x.Code, string.Empty)
+            .SetOnInsert(x => x.ClientId, Guid.Empty)
+            .SetOnInsert(x => x.ClientName, string.Empty)
+            .SetOnInsert(x => x.Status, string.Empty)
+            .SetOnInsert(x => x.Milestones, new List<ContractMilestoneReadModel>())
+            .SetOnInsert(x => x.Attachments, new List<ContractAttachmentReadModel>());
+
+        await col.UpdateOneAsync(filter, ensureDocument, new UpdateOptions { IsUpsert = true }, ct);
+
+        var pull = Builders<ContractReadModel>.Update.PullFilter(
+            x => x.Attachments,
+            a => a.AttachmentId == attachmentId
+        );
+
+        await col.UpdateOneAsync(filter, pull, cancellationToken: ct);
+
+        var attachment = new ContractAttachmentReadModel
+        {
+            AttachmentId = attachmentId,
+            FileName = fileName,
+            ContentType = contentType,
+            StorageKey = storagePath,
+            Size = sizeBytes,
+            UploadedAt = uploadedAtUtc,
+        };
+
+        var push = Builders<ContractReadModel>.Update.Push(x => x.Attachments, attachment);
+
+        await col.UpdateOneAsync(filter, push, cancellationToken: ct);
     }
 
     private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)

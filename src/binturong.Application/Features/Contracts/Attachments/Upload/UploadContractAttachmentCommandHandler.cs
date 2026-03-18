@@ -21,7 +21,7 @@ internal sealed class UploadContractAttachmentCommandHandler
         ".pdf",
     };
 
-    private const long MaxBytes = 20 * 1024 * 1024; // 20MB
+    private const long MaxBytes = 20 * 1024 * 1024;
 
     public UploadContractAttachmentCommandHandler(
         IApplicationDbContext db,
@@ -95,9 +95,12 @@ internal sealed class UploadContractAttachmentCommandHandler
             ContentType = (cmd.ContentType ?? "application/octet-stream").Trim(),
             SizeBytes = cmd.SizeBytes,
             StorageKey = key,
+            StoragePath = key,
             UploadedAtUtc = DateTime.UtcNow,
             UploadedByUserId = _currentUser.UserId,
         };
+
+        att.RaiseUploaded();
 
         _db.ContractAttachments.Add(att);
         await _db.SaveChangesAsync(ct);
