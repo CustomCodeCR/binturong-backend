@@ -11,7 +11,7 @@ using Application.Features.Contracts.Milestones.Add;
 using Application.Features.Contracts.Milestones.Remove;
 using Application.Features.Contracts.Milestones.Update;
 using Application.Features.Contracts.Update;
-using Application.ReadModels.Sales;
+using Application.ReadModels.CRM;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Contracts;
@@ -55,6 +55,7 @@ public sealed class ContractsEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new GetContractByIdQuery(id), ct);
+
                     return result.IsFailure
                         ? Results.NotFound(result.Error)
                         : Results.Ok(result.Value);
@@ -81,7 +82,11 @@ public sealed class ContractsEndpoints : IEndpoint
                         req.Status,
                         req.Description,
                         req.Notes,
-                        req.Milestones.Select(m => new CreateContractMilestone(
+                        req.ResponsibleUserId,
+                        req.AutoRenewEnabled,
+                        req.AutoRenewEveryDays,
+                        req.ExpiryNoticeDays,
+                        req.Milestones.Select(m => new CreateContractMilestoneDto(
                                 m.Description,
                                 m.Percentage,
                                 m.Amount,
@@ -123,7 +128,10 @@ public sealed class ContractsEndpoints : IEndpoint
                             req.EndDate,
                             req.Status,
                             req.Description,
-                            req.Notes
+                            req.Notes,
+                            req.AutoRenewEnabled,
+                            req.AutoRenewEveryDays,
+                            req.ExpiryNoticeDays
                         ),
                         ct
                     );
@@ -145,6 +153,7 @@ public sealed class ContractsEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new DeleteContractCommand(id), ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -264,6 +273,7 @@ public sealed class ContractsEndpoints : IEndpoint
                         new RemoveContractMilestoneCommand(id, milestoneId),
                         ct
                     );
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -282,12 +292,14 @@ public sealed class ContractsEndpoints : IEndpoint
                 ) =>
                 {
                     if (file is null || file.Length == 0)
+                    {
                         return Results.BadRequest(
                             SharedKernel.Error.Validation(
                                 "Contracts.Attachments.Missing",
                                 "No file was provided."
                             )
                         );
+                    }
 
                     await using var stream = file.OpenReadStream();
 
@@ -327,6 +339,7 @@ public sealed class ContractsEndpoints : IEndpoint
                         new DeleteContractAttachmentCommand(id, attachmentId),
                         ct
                     );
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();

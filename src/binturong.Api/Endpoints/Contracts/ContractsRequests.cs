@@ -17,6 +17,10 @@ public sealed record CreateContractRequest(
     string Status,
     string Description,
     string Notes,
+    Guid ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays,
     IReadOnlyList<CreateContractMilestoneRequest> Milestones
 );
 
@@ -29,7 +33,11 @@ public sealed record UpdateContractRequest(
     DateOnly? EndDate,
     string Status,
     string Description,
-    string Notes
+    string Notes,
+    Guid? ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays
 );
 
 // Milestones

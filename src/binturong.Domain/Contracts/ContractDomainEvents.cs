@@ -12,7 +12,14 @@ public sealed record ContractCreatedDomainEvent(
     DateOnly? EndDate,
     string Status,
     string Description,
-    string Notes
+    string Notes,
+    Guid? ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays,
+    bool ExpiryAlertActive,
+    DateTime? ExpiryLastNotifiedAtUtc,
+    DateTime? RenewedAtUtc
 ) : IDomainEvent;
 
 public sealed record ContractUpdatedDomainEvent(
@@ -25,7 +32,14 @@ public sealed record ContractUpdatedDomainEvent(
     DateOnly? EndDate,
     string Status,
     string Description,
-    string Notes
+    string Notes,
+    Guid? ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays,
+    bool ExpiryAlertActive,
+    DateTime? ExpiryLastNotifiedAtUtc,
+    DateTime? RenewedAtUtc
 ) : IDomainEvent;
 
 public sealed record ContractDeletedDomainEvent(Guid ContractId) : IDomainEvent;
@@ -43,6 +57,9 @@ public sealed record ContractCreatedFromQuoteDomainEvent(
     DateOnly StartDate,
     DateOnly? EndDate,
     Guid ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays,
     DateTime CreatedAtUtc
 ) : IDomainEvent;
 

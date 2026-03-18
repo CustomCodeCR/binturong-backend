@@ -39,6 +39,13 @@ internal sealed class ContractProjection
             e.Status,
             e.Description,
             e.Notes,
+            e.ResponsibleUserId,
+            e.AutoRenewEnabled,
+            e.AutoRenewEveryDays,
+            e.ExpiryNoticeDays,
+            e.ExpiryAlertActive,
+            e.ExpiryLastNotifiedAtUtc,
+            e.RenewedAtUtc,
             ct
         );
 
@@ -54,6 +61,13 @@ internal sealed class ContractProjection
             e.Status,
             e.Description,
             e.Notes,
+            e.ResponsibleUserId,
+            e.AutoRenewEnabled,
+            e.AutoRenewEveryDays,
+            e.ExpiryNoticeDays,
+            e.ExpiryAlertActive,
+            e.ExpiryLastNotifiedAtUtc,
+            e.RenewedAtUtc,
             ct
         );
 
@@ -114,7 +128,9 @@ internal sealed class ContractProjection
         var update = Builders<ContractReadModel>
             .Update.Set(x => x.StartDate, ToUtcDate(e.NewStartDate))
             .Set(x => x.EndDate, ToUtcDate(e.NewEndDate))
-            .Set(x => x.Status, "Active");
+            .Set(x => x.Status, "Active")
+            .Set(x => x.RenewedAtUtc, e.RenewedAtUtc)
+            .Set(x => x.ExpiryAlertActive, false);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false }, ct);
     }
@@ -125,7 +141,12 @@ internal sealed class ContractProjection
         var id = $"contract:{e.ContractId}";
         var filter = Builders<ContractReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<ContractReadModel>.Update.Set(x => x.Status, "ExpiringSoon");
+        var update = Builders<ContractReadModel>
+            .Update.Set(x => x.Status, "ExpiringSoon")
+            .Set(x => x.ExpiryAlertActive, true)
+            .Set(x => x.ExpiryLastNotifiedAtUtc, e.NotifiedAtUtc)
+            .Set(x => x.ExpiryNoticeDays, e.NoticeDays)
+            .Set(x => x.EndDate, e.EndDate is null ? null : ToUtcDate(e.EndDate.Value));
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = false }, ct);
     }
@@ -150,7 +171,14 @@ internal sealed class ContractProjection
             .Set(x => x.QuoteId, e.QuoteId)
             .Set(x => x.StartDate, ToUtcDate(e.StartDate))
             .Set(x => x.EndDate, e.EndDate is null ? null : ToUtcDate(e.EndDate.Value))
-            .Set(x => x.Status, "Active");
+            .Set(x => x.Status, "Active")
+            .Set(x => x.ResponsibleUserId, e.ResponsibleUserId)
+            .Set(x => x.AutoRenewEnabled, e.AutoRenewEnabled)
+            .Set(x => x.AutoRenewEveryDays, e.AutoRenewEveryDays)
+            .Set(x => x.ExpiryNoticeDays, e.ExpiryNoticeDays)
+            .Set(x => x.ExpiryAlertActive, false)
+            .Set(x => x.ExpiryLastNotifiedAtUtc, null)
+            .Set(x => x.RenewedAtUtc, null);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -192,6 +220,13 @@ internal sealed class ContractProjection
         string status,
         string? description,
         string? notes,
+        Guid? responsibleUserId,
+        bool autoRenewEnabled,
+        int autoRenewEveryDays,
+        int expiryNoticeDays,
+        bool expiryAlertActive,
+        DateTime? expiryLastNotifiedAtUtc,
+        DateTime? renewedAtUtc,
         CancellationToken ct
     )
     {
@@ -218,7 +253,14 @@ internal sealed class ContractProjection
                 x => x.Description,
                 string.IsNullOrWhiteSpace(description) ? null : description.Trim()
             )
-            .Set(x => x.Notes, string.IsNullOrWhiteSpace(notes) ? null : notes.Trim());
+            .Set(x => x.Notes, string.IsNullOrWhiteSpace(notes) ? null : notes.Trim())
+            .Set(x => x.ResponsibleUserId, responsibleUserId)
+            .Set(x => x.AutoRenewEnabled, autoRenewEnabled)
+            .Set(x => x.AutoRenewEveryDays, autoRenewEveryDays)
+            .Set(x => x.ExpiryNoticeDays, expiryNoticeDays)
+            .Set(x => x.ExpiryAlertActive, expiryAlertActive)
+            .Set(x => x.ExpiryLastNotifiedAtUtc, expiryLastNotifiedAtUtc)
+            .Set(x => x.RenewedAtUtc, renewedAtUtc);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -346,6 +388,6 @@ internal sealed class ContractProjection
         return string.Empty;
     }
 
-    private static DateTime ToUtcDate(DateOnly d) =>
-        new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+    private static DateTime ToUtcDate(DateOnly value) =>
+        new(value.Year, value.Month, value.Day, 0, 0, 0, DateTimeKind.Utc);
 }

@@ -17,6 +17,14 @@ public sealed class ContractReadModel
     public string? Description { get; init; }
     public string? Notes { get; init; }
 
+    public Guid? ResponsibleUserId { get; init; }
+    public bool AutoRenewEnabled { get; init; }
+    public int AutoRenewEveryDays { get; init; }
+    public int ExpiryNoticeDays { get; init; }
+    public bool ExpiryAlertActive { get; init; }
+    public DateTime? ExpiryLastNotifiedAtUtc { get; init; }
+    public DateTime? RenewedAtUtc { get; init; }
+
     public List<ContractMilestoneReadModel> Milestones { get; init; } = [];
     public List<ContractAttachmentReadModel> Attachments { get; init; } = [];
 }

@@ -97,6 +97,9 @@ internal sealed class ConvertQuoteToContractCommandHandler
                 contract.StartDate,
                 contract.EndDate,
                 cmd.ResponsibleUserId,
+                contract.AutoRenewEnabled,
+                contract.AutoRenewEveryDays,
+                contract.ExpiryNoticeDays,
                 nowUtc
             )
         );

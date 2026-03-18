@@ -11,7 +11,10 @@ internal sealed class CreateContractCommandHandler : ICommandHandler<CreateContr
 {
     private readonly IApplicationDbContext _db;
 
-    public CreateContractCommandHandler(IApplicationDbContext db) => _db = db;
+    public CreateContractCommandHandler(IApplicationDbContext db)
+    {
+        _db = db;
+    }
 
     public async Task<Result<Guid>> Handle(CreateContractCommand cmd, CancellationToken ct)
     {
@@ -21,9 +24,33 @@ internal sealed class CreateContractCommandHandler : ICommandHandler<CreateContr
         if (!await _db.Clients.AnyAsync(x => x.Id == cmd.ClientId, ct))
             return Result.Failure<Guid>(ContractErrors.ClientNotFound(cmd.ClientId));
 
+        if (cmd.ResponsibleUserId == Guid.Empty)
+            return Result.Failure<Guid>(
+                Error.Validation(
+                    "Contracts.ResponsibleUser.Required",
+                    "ResponsibleUserId is required."
+                )
+            );
+
         if (cmd.EndDate is not null && cmd.EndDate.Value < cmd.StartDate)
             return Result.Failure<Guid>(
                 ContractErrors.InvalidValidity(cmd.StartDate, cmd.EndDate.Value)
+            );
+
+        if (cmd.ExpiryNoticeDays < 0)
+            return Result.Failure<Guid>(
+                Error.Validation(
+                    "Contracts.ExpiryNoticeDays.Invalid",
+                    "ExpiryNoticeDays must be greater than or equal to zero."
+                )
+            );
+
+        if (cmd.AutoRenewEnabled && cmd.AutoRenewEveryDays <= 0)
+            return Result.Failure<Guid>(
+                Error.Validation(
+                    "Contracts.AutoRenewEveryDays.Invalid",
+                    "AutoRenewEveryDays must be greater than zero when auto renew is enabled."
+                )
             );
 
         var contract = new Contract
@@ -38,36 +65,41 @@ internal sealed class CreateContractCommandHandler : ICommandHandler<CreateContr
             Status = cmd.Status.Trim(),
             Description = cmd.Description?.Trim() ?? string.Empty,
             Notes = cmd.Notes?.Trim() ?? string.Empty,
+            ResponsibleUserId = cmd.ResponsibleUserId,
+            AutoRenewEnabled = cmd.AutoRenewEnabled,
+            AutoRenewEveryDays = cmd.AutoRenewEnabled ? cmd.AutoRenewEveryDays : 365,
+            ExpiryNoticeDays = cmd.ExpiryNoticeDays,
+            ExpiryAlertActive = false,
+            ExpiryLastNotifiedAtUtc = null,
+            RenewedAtUtc = null,
         };
 
-        if (cmd.Milestones is not null)
+        foreach (var milestoneInput in cmd.Milestones ?? [])
         {
-            foreach (var m in cmd.Milestones)
+            var description = milestoneInput.Description?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(description))
+                return Result.Failure<Guid>(ContractErrors.MilestoneDescriptionRequired);
+
+            if (milestoneInput.Percentage < 0 || milestoneInput.Percentage > 100)
+                return Result.Failure<Guid>(ContractErrors.MilestonePercentageInvalid);
+
+            if (milestoneInput.Amount < 0)
+                return Result.Failure<Guid>(ContractErrors.MilestoneAmountInvalid);
+
+            var milestone = new ContractBillingMilestone
             {
-                var desc = m.Description?.Trim() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(desc))
-                    return Result.Failure<Guid>(ContractErrors.MilestoneDescriptionRequired);
+                Id = Guid.NewGuid(),
+                ContractId = contract.Id,
+                Description = description,
+                Percentage = milestoneInput.Percentage,
+                Amount = milestoneInput.Amount,
+                ScheduledDate = milestoneInput.ScheduledDate,
+                IsBilled = false,
+                InvoiceId = null,
+            };
 
-                if (m.Percentage < 0 || m.Percentage > 100)
-                    return Result.Failure<Guid>(ContractErrors.MilestonePercentageInvalid);
-
-                if (m.Amount < 0)
-                    return Result.Failure<Guid>(ContractErrors.MilestoneAmountInvalid);
-
-                var milestone = new ContractBillingMilestone
-                {
-                    Id = Guid.NewGuid(),
-                    ContractId = contract.Id,
-                    Description = desc,
-                    Percentage = m.Percentage,
-                    Amount = m.Amount,
-                    ScheduledDate = m.ScheduledDate,
-                    IsBilled = false,
-                    InvoiceId = null,
-                };
-
-                contract.AddMilestone(milestone);
-            }
+            contract.AddMilestone(milestone);
         }
 
         contract.RaiseCreated();

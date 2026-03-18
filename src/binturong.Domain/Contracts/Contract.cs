@@ -54,7 +54,14 @@ public sealed class Contract : Entity
                 EndDate,
                 Status,
                 Description,
-                Notes
+                Notes,
+                ResponsibleUserId,
+                AutoRenewEnabled,
+                AutoRenewEveryDays,
+                ExpiryNoticeDays,
+                ExpiryAlertActive,
+                ExpiryLastNotifiedAtUtc,
+                RenewedAtUtc
             )
         );
 
@@ -70,42 +77,49 @@ public sealed class Contract : Entity
                 EndDate,
                 Status,
                 Description,
-                Notes
+                Notes,
+                ResponsibleUserId,
+                AutoRenewEnabled,
+                AutoRenewEveryDays,
+                ExpiryNoticeDays,
+                ExpiryAlertActive,
+                ExpiryLastNotifiedAtUtc,
+                RenewedAtUtc
             )
         );
 
     public void RaiseDeleted() => Raise(new ContractDeletedDomainEvent(Id));
 
-    public void AddMilestone(ContractBillingMilestone m)
+    public void AddMilestone(ContractBillingMilestone milestone)
     {
-        BillingMilestones.Add(m);
+        BillingMilestones.Add(milestone);
 
         Raise(
             new ContractMilestoneAddedDomainEvent(
                 Id,
-                m.Id,
-                m.Description,
-                m.Percentage,
-                m.Amount,
-                m.ScheduledDate,
-                m.IsBilled,
-                m.InvoiceId
+                milestone.Id,
+                milestone.Description,
+                milestone.Percentage,
+                milestone.Amount,
+                milestone.ScheduledDate,
+                milestone.IsBilled,
+                milestone.InvoiceId
             )
         );
     }
 
-    public void UpdateMilestone(ContractBillingMilestone m)
+    public void UpdateMilestone(ContractBillingMilestone milestone)
     {
         Raise(
             new ContractMilestoneUpdatedDomainEvent(
                 Id,
-                m.Id,
-                m.Description,
-                m.Percentage,
-                m.Amount,
-                m.ScheduledDate,
-                m.IsBilled,
-                m.InvoiceId
+                milestone.Id,
+                milestone.Description,
+                milestone.Percentage,
+                milestone.Amount,
+                milestone.ScheduledDate,
+                milestone.IsBilled,
+                milestone.InvoiceId
             )
         );
     }
@@ -113,6 +127,7 @@ public sealed class Contract : Entity
     public void RemoveMilestone(Guid milestoneId)
     {
         var existing = BillingMilestones.FirstOrDefault(x => x.Id == milestoneId);
+
         if (existing is not null)
             BillingMilestones.Remove(existing);
 
@@ -122,6 +137,9 @@ public sealed class Contract : Entity
     public bool IsExpiringSoon(DateOnly today)
     {
         if (EndDate is null)
+            return false;
+
+        if (ExpiryNoticeDays < 0)
             return false;
 
         var daysLeft = EndDate.Value.DayNumber - today.DayNumber;
@@ -137,6 +155,7 @@ public sealed class Contract : Entity
         ExpiryLastNotifiedAtUtc = nowUtc;
 
         Raise(new ContractExpiryNoticeSentDomainEvent(Id, EndDate, ExpiryNoticeDays, nowUtc));
+        RaiseUpdated();
     }
 
     public void ClearExpiryAlert()

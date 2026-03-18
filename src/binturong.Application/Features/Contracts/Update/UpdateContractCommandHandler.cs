@@ -1,5 +1,6 @@
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Application.Abstractions.Security;
 using Domain.Contracts;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -9,8 +10,13 @@ namespace Application.Features.Contracts.Update;
 internal sealed class UpdateContractCommandHandler : ICommandHandler<UpdateContractCommand>
 {
     private readonly IApplicationDbContext _db;
+    private readonly ICurrentUser _currentUser;
 
-    public UpdateContractCommandHandler(IApplicationDbContext db) => _db = db;
+    public UpdateContractCommandHandler(IApplicationDbContext db, ICurrentUser currentUser)
+    {
+        _db = db;
+        _currentUser = currentUser;
+    }
 
     public async Task<Result> Handle(UpdateContractCommand cmd, CancellationToken ct)
     {
@@ -30,6 +36,22 @@ internal sealed class UpdateContractCommandHandler : ICommandHandler<UpdateContr
         if (cmd.EndDate is not null && cmd.EndDate.Value < cmd.StartDate)
             return Result.Failure(ContractErrors.InvalidValidity(cmd.StartDate, cmd.EndDate.Value));
 
+        if (cmd.ExpiryNoticeDays < 0)
+            return Result.Failure(
+                Error.Validation(
+                    "Contracts.ExpiryNoticeDays.Invalid",
+                    "ExpiryNoticeDays must be greater than or equal to zero."
+                )
+            );
+
+        if (cmd.AutoRenewEnabled && cmd.AutoRenewEveryDays <= 0)
+            return Result.Failure(
+                Error.Validation(
+                    "Contracts.AutoRenewEveryDays.Invalid",
+                    "AutoRenewEveryDays must be greater than zero when auto renew is enabled."
+                )
+            );
+
         contract.Code = cmd.Code.Trim();
         contract.ClientId = cmd.ClientId;
         contract.QuoteId = cmd.QuoteId;
@@ -39,6 +61,10 @@ internal sealed class UpdateContractCommandHandler : ICommandHandler<UpdateContr
         contract.Status = cmd.Status.Trim();
         contract.Description = cmd.Description?.Trim() ?? string.Empty;
         contract.Notes = cmd.Notes?.Trim() ?? string.Empty;
+        contract.ResponsibleUserId = _currentUser.UserId;
+        contract.AutoRenewEnabled = cmd.AutoRenewEnabled;
+        contract.AutoRenewEveryDays = cmd.AutoRenewEnabled ? cmd.AutoRenewEveryDays : 365;
+        contract.ExpiryNoticeDays = cmd.ExpiryNoticeDays;
 
         contract.RaiseUpdated();
 

@@ -12,5 +12,8 @@ public sealed record UpdateContractCommand(
     DateOnly? EndDate,
     string Status,
     string Description,
-    string Notes
+    string Notes,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays
 ) : ICommand;

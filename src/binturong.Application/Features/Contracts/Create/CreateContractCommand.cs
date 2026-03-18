@@ -2,7 +2,7 @@ using Application.Abstractions.Messaging;
 
 namespace Application.Features.Contracts.Create;
 
-public sealed record CreateContractMilestone(
+public sealed record CreateContractMilestoneDto(
     string Description,
     decimal Percentage,
     decimal Amount,
@@ -19,5 +19,9 @@ public sealed record CreateContractCommand(
     string Status,
     string Description,
     string Notes,
-    IReadOnlyList<CreateContractMilestone> Milestones
+    Guid ResponsibleUserId,
+    bool AutoRenewEnabled,
+    int AutoRenewEveryDays,
+    int ExpiryNoticeDays,
+    IReadOnlyList<CreateContractMilestoneDto> Milestones
 ) : ICommand<Guid>;
