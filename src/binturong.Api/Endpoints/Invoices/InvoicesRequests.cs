@@ -15,7 +15,7 @@ public sealed record CreateInvoiceRequest(
     Guid? SalesOrderId,
     Guid? ContractId,
     DateTime IssueDate,
-    string DocumentType, // "FE" etc
+    string DocumentType,
     string Currency,
     decimal ExchangeRate,
     string? Notes,
@@ -31,13 +31,11 @@ public sealed record UpdateInvoiceRequest(
     string InternalStatus
 );
 
-public sealed record EmitInvoiceRequest(
-    string Mode // "Normal" | "Contingency"
-);
+public sealed record EmitInvoiceRequest(string Mode);
 
 public sealed record ConvertQuoteToInvoiceRequest(
     Guid? BranchId,
     DateTime IssueDate,
     string DocumentType,
-    string Mode // "Normal" | "Contingency"
+    string Mode
 );

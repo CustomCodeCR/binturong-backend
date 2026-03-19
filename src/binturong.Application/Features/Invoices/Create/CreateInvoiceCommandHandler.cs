@@ -62,6 +62,7 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
             Taxes = cmd.Taxes,
             Discounts = cmd.Discounts,
             Total = cmd.Total,
+            Notes = string.IsNullOrWhiteSpace(cmd.Notes) ? null : cmd.Notes.Trim(),
             TaxStatus = "Draft",
             InternalStatus = "Draft",
             EmailSent = false,
@@ -69,15 +70,15 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
 
         foreach (var l in cmd.Lines)
         {
-            var lineDesc = (l.Description ?? string.Empty).Trim();
-
             invoice.Details.Add(
                 new Domain.InvoiceDetails.InvoiceDetail
                 {
                     Id = Guid.NewGuid(),
                     InvoiceId = invoiceId,
                     ProductId = l.ProductId,
-                    Description = lineDesc,
+                    Description = string.IsNullOrWhiteSpace(l.Description)
+                        ? string.Empty
+                        : l.Description.Trim(),
                     Quantity = l.Quantity,
                     UnitPrice = l.UnitPrice,
                     DiscountPerc = l.DiscountPerc,
@@ -87,7 +88,6 @@ internal sealed class CreateInvoiceCommandHandler : ICommandHandler<CreateInvoic
             );
         }
 
-        // IMPORTANT: this only works if InvoiceCreatedDomainEvent includes Lines (see event fix)
         invoice.RaiseCreated();
 
         _db.Invoices.Add(invoice);

@@ -28,6 +28,8 @@ public sealed class InvoiceReadModel
     public decimal Discounts { get; init; }
     public decimal Total { get; init; }
 
+    public string? Notes { get; init; }
+
     public string TaxStatus { get; init; } = default!;
     public string InternalStatus { get; init; } = default!;
     public bool EmailSent { get; init; }
@@ -37,7 +39,6 @@ public sealed class InvoiceReadModel
 
     public IList<InvoiceLineReadModel> Lines { get; init; } = [];
 
-    // Payment summary for CRM/ERP screens
     public decimal PaidAmount { get; init; }
     public decimal PendingAmount { get; init; }
 }
@@ -47,6 +48,7 @@ public sealed class InvoiceLineReadModel
     public Guid InvoiceDetailId { get; init; }
 
     public Guid ProductId { get; init; }
+    public string ProductName { get; init; } = default!;
     public string Description { get; init; } = default!;
 
     public decimal Quantity { get; init; }

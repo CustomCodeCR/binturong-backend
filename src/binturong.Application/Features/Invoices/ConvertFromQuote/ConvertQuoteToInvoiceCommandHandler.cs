@@ -37,15 +37,17 @@ internal sealed class ConvertQuoteToInvoiceCommandHandler
             .FirstOrDefaultAsync(x => x.Id == cmd.QuoteId, ct);
 
         if (quote is null)
+        {
             return Result.Failure<Guid>(
                 Error.NotFound("Quotes.NotFound", $"Quote '{cmd.QuoteId}' not found.")
             );
+        }
 
         if (!quote.AcceptedByClient || quote.Status != "Accepted")
             return Result.Failure<Guid>(InvoiceErrors.QuoteNotAccepted);
 
-        // HU-COT-05 - Scenario 3: overdue receivables (example rule)
         var overdueCutoff = DateTime.UtcNow.AddDays(-30);
+
         var hasOverdue = await _db.Invoices.AnyAsync(
             x =>
                 x.ClientId == quote.ClientId
@@ -57,25 +59,26 @@ internal sealed class ConvertQuoteToInvoiceCommandHandler
         if (hasOverdue)
             return Result.Failure<Guid>(InvoiceErrors.ClientCreditOverdue);
 
-        // HU-COT-05 - Scenario 2: inventory insufficient
-        // Plug your real inventory check here.
-        // if (!await _inventory.HasStockAsync(quote, ct)) return Failure(InvoiceErrors.InventoryInsufficient);
+        var effectiveBranchId = cmd.BranchId ?? quote.BranchId;
 
-        var invoice = new Domain.Invoices.Invoice
+        var invoice = new Invoice
         {
             Id = Guid.NewGuid(),
             ClientId = quote.ClientId,
-            BranchId = quote.BranchId,
+            BranchId = effectiveBranchId,
             SalesOrderId = null,
             ContractId = null,
             IssueDate = cmd.IssueDate,
-            DocumentType = cmd.DocumentType,
+            DocumentType = string.IsNullOrWhiteSpace(cmd.DocumentType)
+                ? "FE"
+                : cmd.DocumentType.Trim(),
             Currency = quote.Currency,
             ExchangeRate = quote.ExchangeRate,
             Subtotal = quote.Subtotal,
             Taxes = quote.Taxes,
             Discounts = quote.Discounts,
             Total = quote.Total,
+            Notes = quote.Notes,
             TaxStatus = "Draft",
             InternalStatus = "Draft",
             EmailSent = false,
@@ -100,7 +103,7 @@ internal sealed class ConvertQuoteToInvoiceCommandHandler
         }
 
         invoice.RaiseCreated();
-        invoice.RaiseCreatedFromQuote(quote.Id, DateTime.Now);
+        invoice.RaiseCreatedFromQuote(quote.Id, DateTime.UtcNow);
 
         _db.Invoices.Add(invoice);
         await _db.SaveChangesAsync(ct);
@@ -112,7 +115,7 @@ internal sealed class ConvertQuoteToInvoiceCommandHandler
             invoice.Id,
             "INVOICE_CONVERTED_FROM_QUOTE",
             string.Empty,
-            $"quoteId={quote.Id}; clientId={quote.ClientId}; total={invoice.Total}",
+            $"quoteId={quote.Id}; clientId={quote.ClientId}; total={invoice.Total}; mode={cmd.Mode}",
             _request.IpAddress,
             _request.UserAgent,
             ct

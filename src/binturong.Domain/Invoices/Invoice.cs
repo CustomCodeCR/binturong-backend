@@ -25,9 +25,10 @@ public sealed class Invoice : Entity
     public decimal Discounts { get; set; }
     public decimal Total { get; set; }
 
-    // E-invoicing status
+    public string? Notes { get; set; }
+
     public string TaxStatus { get; set; } = "Draft"; // Draft | Processing | Emitted | Rejected | Contingency
-    public string InternalStatus { get; set; } = "Draft"; // Draft | Ok | Error | PendingResend | Pending | Paid
+    public string InternalStatus { get; set; } = "Draft"; // Draft | Ok | Error | PendingResend | Pending | Paid | PaymentVerification
 
     public bool EmailSent { get; set; }
     public string PdfS3Key { get; set; } = string.Empty;
@@ -53,9 +54,6 @@ public sealed class Invoice : Entity
     public ICollection<Domain.GatewayTransactions.GatewayTransaction> GatewayTransactions { get; set; } =
         new List<Domain.GatewayTransactions.GatewayTransaction>();
 
-    // =========================
-    // Domain events – CRUD
-    // =========================
     public void RaiseCreated() =>
         Raise(
             new InvoiceCreatedDomainEvent(
@@ -72,6 +70,7 @@ public sealed class Invoice : Entity
                 Taxes,
                 Discounts,
                 Total,
+                Notes,
                 Details
                     .Select(d => new InvoiceCreatedLine(
                         d.Id,
@@ -102,42 +101,53 @@ public sealed class Invoice : Entity
                 Subtotal,
                 Taxes,
                 Discounts,
-                Total
+                Total,
+                Notes
             )
         );
 
     public void RaiseDeleted() => Raise(new InvoiceDeletedDomainEvent(Id));
 
-    // =========================
-    // E-invoicing lifecycle
-    // =========================
     public void RaiseCreatedFromQuote(Guid quoteId, DateTime nowUtc) =>
         Raise(new InvoiceCreatedFromQuoteDomainEvent(Id, quoteId, ClientId, nowUtc));
 
     public void RaiseEmissionRequested(string mode, DateTime nowUtc) =>
         Raise(new InvoiceEmissionRequestedDomainEvent(Id, mode, nowUtc));
 
-    public void RaiseXmlGenerated(string xmlS3Key, DateTime nowUtc) =>
+    public void RaiseXmlGenerated(string xmlS3Key, DateTime nowUtc)
+    {
+        XmlS3Key = xmlS3Key;
         Raise(new InvoiceXmlGeneratedDomainEvent(Id, xmlS3Key, nowUtc));
+    }
 
-    public void RaisePdfGenerated(string pdfS3Key, DateTime nowUtc) =>
+    public void RaisePdfGenerated(string pdfS3Key, DateTime nowUtc)
+    {
+        PdfS3Key = pdfS3Key;
         Raise(new InvoicePdfGeneratedDomainEvent(Id, pdfS3Key, nowUtc));
+    }
 
     public void RaiseSentToTaxAuthority(
         string taxKey,
         string consecutive,
         string taxStatus,
         DateTime nowUtc
-    ) =>
+    )
+    {
+        TaxKey = taxKey;
+        Consecutive = consecutive;
+        TaxStatus = taxStatus;
         Raise(new InvoiceSentToTaxAuthorityDomainEvent(Id, taxKey, consecutive, taxStatus, nowUtc));
+    }
 
     public void RaiseTaxAuthorityRejected(string errorCode, string errorMessage, DateTime nowUtc) =>
         Raise(new InvoiceTaxAuthorityRejectedDomainEvent(Id, errorCode, errorMessage, nowUtc));
 
-    public void RaiseEmailSent(string to, DateTime nowUtc) =>
+    public void RaiseEmailSent(string to, DateTime nowUtc)
+    {
+        EmailSent = true;
         Raise(new InvoiceEmailSentDomainEvent(Id, to, nowUtc));
+    }
 
-    // Called by ElectronicInvoicingService
     public void RaiseContingencyActivated(DateTime nowUtc)
     {
         TaxStatus = "Contingency";
@@ -145,7 +155,6 @@ public sealed class Invoice : Entity
         Raise(new InvoiceContingencyActivatedDomainEvent(Id, nowUtc));
     }
 
-    // Called by ElectronicInvoicingService
     public void RaiseEmissionRejected(string reason, DateTime nowUtc)
     {
         TaxStatus = "Rejected";
@@ -153,7 +162,6 @@ public sealed class Invoice : Entity
         Raise(new InvoiceEmissionRejectedDomainEvent(Id, reason, nowUtc));
     }
 
-    // Called by ElectronicInvoicingService
     public void RaiseEmitted(DateTime nowUtc)
     {
         if (string.IsNullOrWhiteSpace(TaxStatus))
@@ -163,9 +171,6 @@ public sealed class Invoice : Entity
         Raise(new InvoiceEmittedDomainEvent(Id, TaxKey, Consecutive, PdfS3Key, XmlS3Key, nowUtc));
     }
 
-    // =========================
-    // Accounts receivable (HU-FAC-03)
-    // =========================
     public void ApplyPayment(decimal appliedAmount, DateTime nowUtc)
     {
         var paid = PaymentDetails.Sum(x => x.AppliedAmount);

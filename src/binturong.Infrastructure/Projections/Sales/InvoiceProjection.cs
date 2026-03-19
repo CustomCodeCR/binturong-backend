@@ -21,7 +21,12 @@ internal sealed class InvoiceProjection
         IProjector<InvoicePaidDomainEvent>,
         IProjector<InvoiceCreatedFromQuoteDomainEvent>,
         IProjector<InvoicePaymentVerificationSetDomainEvent>,
-        IProjector<InvoicePaymentVerificationClearedDomainEvent>
+        IProjector<InvoicePaymentVerificationClearedDomainEvent>,
+        IProjector<InvoiceXmlGeneratedDomainEvent>,
+        IProjector<InvoicePdfGeneratedDomainEvent>,
+        IProjector<InvoiceSentToTaxAuthorityDomainEvent>,
+        IProjector<InvoiceTaxAuthorityRejectedDomainEvent>,
+        IProjector<InvoiceEmailSentDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -51,6 +56,64 @@ internal sealed class InvoiceProjection
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.TaxStatus, "Processing")
             .Set(x => x.InternalStatus, "Pending");
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(InvoiceXmlGeneratedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>.Update.Set(x => x.XmlS3Key, e.XmlS3Key);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(InvoicePdfGeneratedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>.Update.Set(x => x.PdfS3Key, e.PdfS3Key);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(InvoiceSentToTaxAuthorityDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var normalizedInternalStatus = string.Equals(
+            e.TaxStatus,
+            "Rejected",
+            StringComparison.OrdinalIgnoreCase
+        )
+            ? "Error"
+            : "Ok";
+
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.TaxKey, e.TaxKey)
+            .Set(x => x.Consecutive, e.Consecutive)
+            .Set(x => x.TaxStatus, e.TaxStatus)
+            .Set(x => x.InternalStatus, normalizedInternalStatus);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    public async Task ProjectAsync(InvoiceTaxAuthorityRejectedDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.TaxStatus, "Rejected")
+            .Set(x => x.InternalStatus, "Error");
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -114,7 +177,18 @@ internal sealed class InvoiceProjection
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
-    public Task ProjectAsync(InvoicePaidDomainEvent e, CancellationToken ct) => Task.CompletedTask;
+    public async Task ProjectAsync(InvoicePaidDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.InternalStatus, "Paid")
+            .Set(x => x.PendingAmount, 0m);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
 
     public Task ProjectAsync(InvoiceCreatedFromQuoteDomainEvent e, CancellationToken ct) =>
         Task.CompletedTask;
@@ -147,6 +221,17 @@ internal sealed class InvoiceProjection
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
+    public async Task ProjectAsync(InvoiceEmailSentDomainEvent e, CancellationToken ct)
+    {
+        var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
+        var id = $"invoice:{e.InvoiceId}";
+        var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
+
+        var update = Builders<InvoiceReadModel>.Update.Set(x => x.EmailSent, true);
+
+        await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
     private async Task UpsertHeaderAsync(InvoiceCreatedDomainEvent e, CancellationToken ct)
     {
         var col = _db.GetCollection<InvoiceReadModel>(MongoCollections.Invoices);
@@ -160,6 +245,7 @@ internal sealed class InvoiceProjection
 
         foreach (var line in e.Lines)
         {
+            var productName = await ResolveProductNameAsync(line.ProductId, ct);
             var resolvedDescription = await ResolveProductDescriptionAsync(line.ProductId, ct);
 
             lines.Add(
@@ -167,13 +253,10 @@ internal sealed class InvoiceProjection
                 {
                     InvoiceDetailId = line.InvoiceDetailId,
                     ProductId = line.ProductId,
-                    Description = !string.IsNullOrWhiteSpace(resolvedDescription)
-                        ? resolvedDescription
-                        : (
-                            string.IsNullOrWhiteSpace(line.Description)
-                                ? string.Empty
-                                : line.Description.Trim()
-                        ),
+                    ProductName = productName,
+                    Description = !string.IsNullOrWhiteSpace(line.Description)
+                        ? line.Description.Trim()
+                        : resolvedDescription,
                     Quantity = line.Quantity,
                     UnitPrice = line.UnitPrice,
                     DiscountPerc = line.DiscountPerc,
@@ -203,6 +286,7 @@ internal sealed class InvoiceProjection
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
             .Set(x => x.Total, e.Total)
+            .Set(x => x.Notes, e.Notes)
             .Set(x => x.TaxStatus, "Draft")
             .Set(x => x.InternalStatus, "Draft")
             .Set(x => x.EmailSent, false)
@@ -239,7 +323,8 @@ internal sealed class InvoiceProjection
             .Set(x => x.Subtotal, e.Subtotal)
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
-            .Set(x => x.Total, e.Total);
+            .Set(x => x.Total, e.Total)
+            .Set(x => x.Notes, e.Notes);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -247,7 +332,6 @@ internal sealed class InvoiceProjection
     private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)
     {
         var clients = _db.GetCollection<ClientReadModel>(MongoCollections.Clients);
-
         var client = await clients.Find(x => x.ClientId == clientId).FirstOrDefaultAsync(ct);
 
         if (client is null)
@@ -268,19 +352,23 @@ internal sealed class InvoiceProjection
     private async Task<string> ResolveBranchNameAsync(Guid branchId, CancellationToken ct)
     {
         var branches = _db.GetCollection<BranchReadModel>(MongoCollections.Branches);
-
         var branch = await branches.Find(x => x.BranchId == branchId).FirstOrDefaultAsync(ct);
 
         if (branch is null)
             return string.Empty;
 
-        return string.IsNullOrWhiteSpace(branch.Name) ? string.Empty : branch.Name.Trim();
+        if (!string.IsNullOrWhiteSpace(branch.Code) && !string.IsNullOrWhiteSpace(branch.Name))
+            return $"{branch.Code.Trim()} - {branch.Name.Trim()}";
+
+        if (!string.IsNullOrWhiteSpace(branch.Name))
+            return branch.Name.Trim();
+
+        return string.Empty;
     }
 
-    private async Task<string> ResolveProductDescriptionAsync(Guid productId, CancellationToken ct)
+    private async Task<string> ResolveProductNameAsync(Guid productId, CancellationToken ct)
     {
         var products = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
-
         var product = await products.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
 
         if (product is null)
@@ -291,6 +379,26 @@ internal sealed class InvoiceProjection
 
         if (!string.IsNullOrWhiteSpace(product.Description))
             return product.Description.Trim();
+
+        if (!string.IsNullOrWhiteSpace(product.SKU))
+            return product.SKU.Trim();
+
+        return string.Empty;
+    }
+
+    private async Task<string> ResolveProductDescriptionAsync(Guid productId, CancellationToken ct)
+    {
+        var products = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
+        var product = await products.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
+
+        if (product is null)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(product.Description))
+            return product.Description.Trim();
+
+        if (!string.IsNullOrWhiteSpace(product.Name))
+            return product.Name.Trim();
 
         if (!string.IsNullOrWhiteSpace(product.SKU))
             return product.SKU.Trim();

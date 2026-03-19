@@ -20,9 +20,6 @@ public sealed class InvoicesEndpoints : IEndpoint
     {
         var group = app.MapGroup("/api/invoices").WithTags("Invoices");
 
-        // =========================
-        // GET list (Mongo)
-        // =========================
         group
             .MapGet(
                 "/",
@@ -46,9 +43,6 @@ public sealed class InvoicesEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.InvoicesRead);
 
-        // =========================
-        // GET by id (Mongo)
-        // =========================
         group
             .MapGet(
                 "/{id:guid}",
@@ -66,9 +60,6 @@ public sealed class InvoicesEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.InvoicesRead);
 
-        // =========================
-        // CREATE (Write/Postgres)
-        // =========================
         group
             .MapPost(
                 "/",
@@ -78,21 +69,16 @@ public sealed class InvoicesEndpoints : IEndpoint
                     CancellationToken ct
                 ) =>
                 {
-                    // Map API lines -> Feature lines + compute totals
                     var featureLines = req
                         .Lines.Select(l =>
                         {
                             var baseAmount = l.Quantity * l.UnitPrice;
-
                             var discountAmount = Math.Round(
                                 baseAmount * (l.DiscountPerc / 100m),
                                 2
                             );
-
                             var taxable = baseAmount - discountAmount;
-
                             var taxAmount = Math.Round(taxable * (l.TaxPerc / 100m), 2);
-
                             var computedLineTotal = Math.Round(taxable + taxAmount, 2);
 
                             return new CreateInvoiceLine(
@@ -141,6 +127,7 @@ public sealed class InvoicesEndpoints : IEndpoint
                             taxes,
                             discounts,
                             total,
+                            req.Notes,
                             featureLines
                         ),
                         ct
@@ -155,10 +142,6 @@ public sealed class InvoicesEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.InvoicesCreate);
-
-        // =========================
-        // UPDATE (Write/Postgres)
-        // =========================
 
         group
             .MapPut(
@@ -190,9 +173,6 @@ public sealed class InvoicesEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.InvoicesUpdate);
 
-        // =========================
-        // DELETE (Write/Postgres)
-        // =========================
         group
             .MapDelete(
                 "/{id:guid}",
@@ -210,9 +190,6 @@ public sealed class InvoicesEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.InvoicesDelete);
 
-        // =========================
-        // EMIT (HU-FAC-01)
-        // =========================
         group
             .MapPost(
                 "/{id:guid}/emit",
@@ -233,9 +210,6 @@ public sealed class InvoicesEndpoints : IEndpoint
             )
             .RequireScope(SecurityScopes.InvoicesEmit);
 
-        // =========================
-        // CONVERT FROM QUOTE (HU-COT-05)
-        // =========================
         group
             .MapPost(
                 "/convert-from-quote/{quoteId:guid}",
@@ -246,11 +220,16 @@ public sealed class InvoicesEndpoints : IEndpoint
                     CancellationToken ct
                 ) =>
                 {
-                    // Tu command actual solo recibe (QuoteId, IssueDate, DocumentType).
-                    // req.BranchId y req.Mode quedan para el handler (si los necesitás,
-                    // cambia la firma del command).
+                    var mode = string.IsNullOrWhiteSpace(req.Mode) ? "Normal" : req.Mode.Trim();
+
                     var result = await handler.Handle(
-                        new ConvertQuoteToInvoiceCommand(quoteId, req.IssueDate, req.DocumentType),
+                        new ConvertQuoteToInvoiceCommand(
+                            quoteId,
+                            req.BranchId,
+                            req.IssueDate,
+                            req.DocumentType,
+                            mode
+                        ),
                         ct
                     );
 

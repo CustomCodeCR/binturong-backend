@@ -2,7 +2,6 @@ using SharedKernel;
 
 namespace Domain.Invoices;
 
-// CRUD
 public sealed record InvoiceCreatedDomainEvent(
     Guid InvoiceId,
     Guid ClientId,
@@ -17,6 +16,7 @@ public sealed record InvoiceCreatedDomainEvent(
     decimal Taxes,
     decimal Discounts,
     decimal Total,
+    string? Notes,
     IReadOnlyList<InvoiceCreatedLine> Lines
 ) : IDomainEvent;
 
@@ -44,15 +44,15 @@ public sealed record InvoiceUpdatedDomainEvent(
     decimal Subtotal,
     decimal Taxes,
     decimal Discounts,
-    decimal Total
+    decimal Total,
+    string? Notes
 ) : IDomainEvent;
 
 public sealed record InvoiceDeletedDomainEvent(Guid InvoiceId) : IDomainEvent;
 
-// Lifecycle / e-invoicing
 public sealed record InvoiceEmissionRequestedDomainEvent(
     Guid InvoiceId,
-    string Mode, // "Normal" | "Contingency"
+    string Mode,
     DateTime RequestedAtUtc
 ) : IDomainEvent;
 
@@ -104,7 +104,6 @@ public sealed record InvoiceEmittedDomainEvent(
 public sealed record InvoiceEmailSentDomainEvent(Guid InvoiceId, string To, DateTime SentAtUtc)
     : IDomainEvent;
 
-// A/R
 public sealed record InvoicePaymentAppliedDomainEvent(
     Guid InvoiceId,
     decimal AppliedAmount,
@@ -115,7 +114,6 @@ public sealed record InvoicePaymentAppliedDomainEvent(
 
 public sealed record InvoicePaidDomainEvent(Guid InvoiceId, DateTime PaidAtUtc) : IDomainEvent;
 
-// Conversions
 public sealed record InvoiceCreatedFromQuoteDomainEvent(
     Guid InvoiceId,
     Guid QuoteId,
@@ -125,10 +123,9 @@ public sealed record InvoiceCreatedFromQuoteDomainEvent(
 
 public sealed record InvoicePaymentVerificationSetDomainEvent(
     Guid InvoiceId,
-    string Reason, // "BankTransferPending"
+    string Reason,
     DateTime AtUtc
 ) : IDomainEvent;
 
-// Verificación completada (opcional, si luego quieres pasar de Verification -> Paid/Pending)
 public sealed record InvoicePaymentVerificationClearedDomainEvent(Guid InvoiceId, DateTime AtUtc)
     : IDomainEvent;
