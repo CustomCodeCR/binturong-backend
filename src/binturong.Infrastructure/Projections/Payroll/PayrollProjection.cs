@@ -1,4 +1,5 @@
 using Application.Abstractions.Projections;
+using Application.ReadModels.Common;
 using Application.ReadModels.Payroll;
 using Domain.PayrollDetails;
 using Domain.Payrolls;
@@ -13,19 +14,17 @@ internal sealed class PayrollProjection
         IProjector<PayrollDetailCalculatedDomainEvent>,
         IProjector<PayrollCommissionAdjustedDomainEvent>
 {
-    private const string CollectionName = "payrolls";
     private readonly IMongoDatabase _db;
 
     public PayrollProjection(IMongoDatabase db) => _db = db;
 
     public async Task ProjectAsync(PayrollCreatedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<PayrollReadModel>(CollectionName);
+        var col = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
 
         var id = $"payroll:{e.PayrollId}";
         var filter = Builders<PayrollReadModel>.Filter.Eq(x => x.Id, id);
 
-        // Use upsert to be safe with retries
         var update = Builders<PayrollReadModel>
             .Update.SetOnInsert(x => x.Id, id)
             .SetOnInsert(x => x.PayrollId, e.PayrollId)
@@ -43,7 +42,7 @@ internal sealed class PayrollProjection
 
     public async Task ProjectAsync(PayrollCalculatedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<PayrollReadModel>(CollectionName);
+        var col = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
 
         await col.UpdateOneAsync(
             x => x.Id == $"payroll:{e.PayrollId}",
@@ -57,7 +56,7 @@ internal sealed class PayrollProjection
 
     public async Task ProjectAsync(PayrollClosedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<PayrollReadModel>(CollectionName);
+        var col = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
 
         await col.UpdateOneAsync(
             x => x.Id == $"payroll:{e.PayrollId}",
@@ -71,32 +70,34 @@ internal sealed class PayrollProjection
 
     public async Task ProjectAsync(PayrollDetailCalculatedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<PayrollReadModel>(CollectionName);
+        var payrollCol = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
+        var employeeCol = _db.GetCollection<EmployeeReadModel>(MongoCollections.Employees);
+
+        var employee = await employeeCol
+            .Find(x => x.EmployeeId == e.EmployeeId)
+            .FirstOrDefaultAsync(ct);
 
         var id = $"payroll:{e.PayrollId}";
         var filter = Builders<PayrollReadModel>.Filter.Eq(x => x.Id, id);
 
-        // Ensure document exists (if events arrive out of order)
         var ensure = Builders<PayrollReadModel>
             .Update.SetOnInsert(x => x.Id, id)
             .SetOnInsert(x => x.PayrollId, e.PayrollId);
 
-        await col.UpdateOneAsync(filter, ensure, new UpdateOptions { IsUpsert = true }, ct);
+        await payrollCol.UpdateOneAsync(filter, ensure, new UpdateOptions { IsUpsert = true }, ct);
 
-        // Remove existing detail
         var pull = Builders<PayrollReadModel>.Update.PullFilter(
             x => x.Details,
             d => d.PayrollDetailId == e.PayrollDetailId
         );
 
-        await col.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
+        await payrollCol.UpdateOneAsync(filter, pull, new UpdateOptions { IsUpsert = false }, ct);
 
-        // Add new detail
         var detail = new PayrollDetailReadModel
         {
             PayrollDetailId = e.PayrollDetailId,
             EmployeeId = e.EmployeeId,
-            EmployeeName = string.Empty,
+            EmployeeName = employee?.FullName ?? string.Empty,
             GrossSalary = e.GrossSalary,
             OvertimeHours = e.OvertimeHours,
             CommissionAmount = e.CommissionAmount,
@@ -106,10 +107,10 @@ internal sealed class PayrollProjection
         };
 
         var push = Builders<PayrollReadModel>.Update.Push(x => x.Details, detail);
-        await col.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = false }, ct);
 
-        // Touch updated time
-        await col.UpdateOneAsync(
+        await payrollCol.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = false }, ct);
+
+        await payrollCol.UpdateOneAsync(
             filter,
             Builders<PayrollReadModel>.Update.Set(x => x.UpdatedAtUtc, e.UpdatedAtUtc),
             new UpdateOptions { IsUpsert = false },
@@ -119,7 +120,7 @@ internal sealed class PayrollProjection
 
     public async Task ProjectAsync(PayrollCommissionAdjustedDomainEvent e, CancellationToken ct)
     {
-        var col = _db.GetCollection<PayrollReadModel>(CollectionName);
+        var col = _db.GetCollection<PayrollReadModel>(MongoCollections.Payrolls);
 
         var id = $"payroll:{e.PayrollId}";
         var filter = Builders<PayrollReadModel>.Filter.And(
@@ -138,5 +139,5 @@ internal sealed class PayrollProjection
     }
 
     private static DateTime ToUtcDate(DateOnly d) =>
-        new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
+        new(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc);
 }

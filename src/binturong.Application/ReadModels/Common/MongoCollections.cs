@@ -45,6 +45,7 @@ public static class MongoCollections
     // ===== PAYROLL =====
     public const string Employees = "employees";
     public const string Payrolls = "payrolls";
+    public const string PayrollOvertimes = "payroll_overtimes";
 
     // ===== SERVICES =====
     public const string Services = "services";

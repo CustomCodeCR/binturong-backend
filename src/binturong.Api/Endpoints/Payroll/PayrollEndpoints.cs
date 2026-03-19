@@ -37,14 +37,18 @@ public sealed class PayrollEndpoints : IEndpoint
                     CancellationToken ct
                 ) =>
                 {
+                    var currentPage = Math.Max(page ?? 1, 1);
+                    var currentPageSize = Math.Max(pageSize ?? 50, 1);
+                    var skip = (currentPage - 1) * currentPageSize;
+
                     var result = await handler.Handle(
                         new GetPayrollsQuery(
                             periodCode,
                             fromUtc,
                             toUtc,
                             status,
-                            page ?? 1,
-                            pageSize ?? 50
+                            skip,
+                            currentPageSize
                         ),
                         ct
                     );
@@ -141,6 +145,7 @@ public sealed class PayrollEndpoints : IEndpoint
                 ) =>
                 {
                     var result = await handler.Handle(new DeletePayrollCommand(payrollId), ct);
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -219,6 +224,7 @@ public sealed class PayrollEndpoints : IEndpoint
                         new DeletePayrollOvertimeCommand(overtimeId),
                         ct
                     );
+
                     return result.IsFailure
                         ? Results.BadRequest(result.Error)
                         : Results.NoContent();
@@ -293,6 +299,7 @@ public sealed class PayrollEndpoints : IEndpoint
                         new SendPayslipEmailCommand(payrollId, employeeId),
                         ct
                     );
+
                     return result.IsFailure ? Results.BadRequest(result.Error) : Results.Accepted();
                 }
             )
