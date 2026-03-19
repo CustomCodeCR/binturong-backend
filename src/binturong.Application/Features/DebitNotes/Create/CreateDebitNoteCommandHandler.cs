@@ -51,7 +51,7 @@ internal sealed class CreateDebitNoteCommandHandler : ICommandHandler<CreateDebi
         {
             Id = Guid.NewGuid(),
             InvoiceId = cmd.InvoiceId,
-            IssueDate = cmd.IssueDate,
+            IssueDate = EnsureUtc(cmd.IssueDate),
             Reason = cmd.Reason.Trim(),
             TotalAmount = cmd.TotalAmount,
             TaxStatus = "Draft",
@@ -76,5 +76,15 @@ internal sealed class CreateDebitNoteCommandHandler : ICommandHandler<CreateDebi
         );
 
         return Result.Success(dn.Id);
+    }
+
+    private static DateTime EnsureUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        };
     }
 }

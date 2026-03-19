@@ -12,6 +12,13 @@ namespace Application.Features.CreditNotes.Create;
 internal sealed class CreateCreditNoteCommandHandler
     : ICommandHandler<CreateCreditNoteCommand, Guid>
 {
+    private static readonly string[] AuthorizedReasons =
+    [
+        "Return",
+        "PriceCorrection",
+        "ServiceCanceled",
+    ];
+
     private readonly IApplicationDbContext _db;
     private readonly ICommandBus _bus;
     private readonly IRequestContext _request;
@@ -41,9 +48,12 @@ internal sealed class CreateCreditNoteCommandHandler
         if (cmd.TotalAmount <= 0)
             return Result.Failure<Guid>(CreditNoteErrors.TotalAmountInvalid);
 
-        var authorizedReasons = new[] { "Return", "PriceCorrection", "ServiceCanceled" };
-        if (!authorizedReasons.Contains(cmd.Reason.Trim()))
+        var normalizedReason = cmd.Reason.Trim();
+
+        if (!AuthorizedReasons.Contains(normalizedReason, StringComparer.OrdinalIgnoreCase))
+        {
             return Result.Failure<Guid>(CreditNoteErrors.ReasonNotAuthorized);
+        }
 
         var invoice = await _db.Invoices.FirstOrDefaultAsync(x => x.Id == cmd.InvoiceId, ct);
         if (invoice is null)
@@ -56,8 +66,8 @@ internal sealed class CreateCreditNoteCommandHandler
         {
             Id = Guid.NewGuid(),
             InvoiceId = cmd.InvoiceId,
-            IssueDate = cmd.IssueDate,
-            Reason = cmd.Reason.Trim(),
+            IssueDate = EnsureUtc(cmd.IssueDate),
+            Reason = normalizedReason,
             TotalAmount = cmd.TotalAmount,
             TaxStatus = "Draft",
         };
@@ -81,5 +91,15 @@ internal sealed class CreateCreditNoteCommandHandler
         );
 
         return Result.Success(cn.Id);
+    }
+
+    private static DateTime EnsureUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        };
     }
 }
