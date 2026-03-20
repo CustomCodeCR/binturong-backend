@@ -504,6 +504,52 @@ public static class ScopeRegistry
         new ScopeDefinition("payment_methods.create", "Create payment methods", Roles.Admin),
         new ScopeDefinition("payment_methods.update", "Update payment methods", Roles.Admin),
         new ScopeDefinition("payment_methods.delete", "Delete payment methods", Roles.Admin),
+        new ScopeDefinition("services.read", "View services", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("services.create", "Create services", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("services.update", "Update services", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("services.delete", "Delete services", Roles.Admin),
+        new ScopeDefinition(
+            "service_orders.read",
+            "View service orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "service_orders.create",
+            "Create service orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "service_orders.update",
+            "Update service orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "service_orders.assign_technician",
+            "Assign technicians to service orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "service_orders.close",
+            "Close service orders",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "employees.work_history.read",
+            "View employee work history",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "employees.work_history.export",
+            "Export employee work history",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

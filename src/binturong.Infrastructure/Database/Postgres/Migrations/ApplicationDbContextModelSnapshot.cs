@@ -2838,12 +2838,17 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("numeric(10,4)")
                         .HasColumnName("discount_perc");
 
+                    b.Property<string>("ItemType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("item_type");
+
                     b.Property<decimal>("LineTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("line_total");
 
-                    b.Property<Guid>("ProductId")
+                    b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid")
                         .HasColumnName("ProductId");
 
@@ -2855,6 +2860,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Property<Guid>("SalesOrderId")
                         .HasColumnType("uuid")
                         .HasColumnName("SalesOrderId");
+
+                    b.Property<Guid?>("ServiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("service_id");
 
                     b.Property<decimal>("TaxPerc")
                         .HasPrecision(10, 4)
@@ -2874,6 +2883,9 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
                     b.HasIndex("SalesOrderId")
                         .HasDatabaseName("ix_sales_order_details_sales_order_id");
+
+                    b.HasIndex("ServiceId")
+                        .HasDatabaseName("ix_sales_order_details_service_id");
 
                     b.ToTable("SalesOrderDetails", (string)null);
                 });
@@ -3258,10 +3270,24 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("ServiceId");
 
+                    b.Property<string>("AvailabilityStatus")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("availability_status");
+
                     b.Property<decimal>("BaseRate")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("base_rate");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("category_name");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -3279,6 +3305,10 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsCategoryProtected")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_category_protected");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -3291,6 +3321,9 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_services");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_services_category_id");
 
                     b.HasIndex("Code")
                         .IsUnique()
@@ -4750,7 +4783,6 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .WithMany("SalesOrderDetails")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("fk_sales_order_details_products_product_id");
 
                     b.HasOne("Domain.SalesOrders.SalesOrder", "SalesOrder")
@@ -4760,9 +4792,16 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_sales_order_details_sales_orders_sales_order_id");
 
+                    b.HasOne("Domain.Services.Service", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .HasConstraintName("fk_sales_order_details_services_service_id");
+
                     b.Navigation("Product");
 
                     b.Navigation("SalesOrder");
+
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("Domain.SalesOrders.SalesOrder", b =>
@@ -4906,6 +4945,18 @@ namespace binturong.Infrastructure.Database.Postgres.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Contract");
+                });
+
+            modelBuilder.Entity("Domain.Services.Service", b =>
+                {
+                    b.HasOne("Domain.ProductCategories.ProductCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_services_product_categories_category_id");
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("Domain.ShoppingCarts.ShoppingCart", b =>

@@ -5,6 +5,7 @@ using Application.ReadModels.Inventory;
 using Application.ReadModels.MasterData;
 using Application.ReadModels.Sales;
 using Application.ReadModels.Security;
+using Application.ReadModels.Services;
 using Domain.SalesOrders;
 using MongoDB.Driver;
 
@@ -124,7 +125,8 @@ internal sealed class SalesOrderProjection
     {
         var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
 
-        var productName = await ResolveProductNameAsync(e.ProductId, ct);
+        var itemType = NormalizeItemType(e.ItemType);
+        var itemName = await ResolveItemNameAsync(itemType, e.ProductId, e.ServiceId, ct);
 
         var id = $"so:{e.SalesOrderId}";
         var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, id);
@@ -132,8 +134,10 @@ internal sealed class SalesOrderProjection
         var line = new SalesOrderLineReadModel
         {
             SalesOrderDetailId = e.SalesOrderDetailId,
+            ItemType = itemType,
             ProductId = e.ProductId,
-            ProductName = productName,
+            ServiceId = e.ServiceId,
+            ItemName = itemName,
             Quantity = e.Quantity,
             UnitPrice = e.UnitPrice,
             DiscountPerc = e.DiscountPerc,
@@ -155,6 +159,35 @@ internal sealed class SalesOrderProjection
         await salesOrders.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
     }
 
+    private static string NormalizeItemType(string itemType)
+    {
+        if (string.Equals(itemType, "Service", StringComparison.OrdinalIgnoreCase))
+            return "Service";
+
+        return "Product";
+    }
+
+    private async Task<string> ResolveItemNameAsync(
+        string itemType,
+        Guid? productId,
+        Guid? serviceId,
+        CancellationToken ct
+    )
+    {
+        if (itemType == "Service")
+        {
+            if (!serviceId.HasValue)
+                return string.Empty;
+
+            return await ResolveServiceNameAsync(serviceId.Value, ct);
+        }
+
+        if (!productId.HasValue)
+            return string.Empty;
+
+        return await ResolveProductNameAsync(productId.Value, ct);
+    }
+
     private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)
     {
         var clients = _db.GetCollection<ClientReadModel>(MongoCollections.Clients);
@@ -162,19 +195,13 @@ internal sealed class SalesOrderProjection
         var client = await clients.Find(x => x.ClientId == clientId).FirstOrDefaultAsync(ct);
 
         if (client is null)
-        {
             return string.Empty;
-        }
 
         if (!string.IsNullOrWhiteSpace(client.TradeName))
-        {
             return client.TradeName;
-        }
 
         if (!string.IsNullOrWhiteSpace(client.ContactName))
-        {
             return client.ContactName;
-        }
 
         return client.Identification;
     }
@@ -186,14 +213,10 @@ internal sealed class SalesOrderProjection
         var branch = await branches.Find(x => x.BranchId == branchId).FirstOrDefaultAsync(ct);
 
         if (branch is null)
-        {
             return null;
-        }
 
         if (!string.IsNullOrWhiteSpace(branch.Code) && !string.IsNullOrWhiteSpace(branch.Name))
-        {
             return $"{branch.Code} - {branch.Name}";
-        }
 
         return branch.Name;
     }
@@ -205,14 +228,10 @@ internal sealed class SalesOrderProjection
         var user = await users.Find(x => x.UserId == userId).FirstOrDefaultAsync(ct);
 
         if (user is null)
-        {
             return null;
-        }
 
         if (!string.IsNullOrWhiteSpace(user.Username))
-        {
             return user.Username;
-        }
 
         return user.Email;
     }
@@ -224,15 +243,26 @@ internal sealed class SalesOrderProjection
         var product = await products.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
 
         if (product is null)
-        {
             return string.Empty;
-        }
 
         if (!string.IsNullOrWhiteSpace(product.Name))
-        {
             return product.Name;
-        }
 
         return product.SKU;
+    }
+
+    private async Task<string> ResolveServiceNameAsync(Guid serviceId, CancellationToken ct)
+    {
+        var services = _db.GetCollection<ServiceReadModel>(MongoCollections.Services);
+
+        var service = await services.Find(x => x.ServiceId == serviceId).FirstOrDefaultAsync(ct);
+
+        if (service is null)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(service.Name))
+            return service.Name;
+
+        return service.Code;
     }
 }

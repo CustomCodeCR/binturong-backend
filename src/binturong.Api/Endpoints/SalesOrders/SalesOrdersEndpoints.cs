@@ -76,7 +76,8 @@ public sealed class SalesOrdersEndpoints : IEndpoint
                         req.ExchangeRate,
                         req.Notes,
                         req.Lines.Select(l => new CreateSalesOrderLine(
-                                l.ProductId,
+                                l.ItemType,
+                                l.ItemId,
                                 l.Quantity,
                                 l.UnitPrice,
                                 l.DiscountPerc,

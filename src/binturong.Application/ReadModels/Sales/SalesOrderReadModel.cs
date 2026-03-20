@@ -1,3 +1,5 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Application.ReadModels.Sales;
 
 public sealed class SalesOrderReadModel
@@ -36,12 +38,17 @@ public sealed class SalesOrderReadModel
     public IReadOnlyList<SalesOrderLineReadModel> Lines { get; init; } = [];
 }
 
+[BsonIgnoreExtraElements]
 public sealed class SalesOrderLineReadModel
 {
     public Guid SalesOrderDetailId { get; init; }
 
-    public Guid ProductId { get; init; }
-    public string ProductName { get; init; } = default!;
+    public string ItemType { get; init; } = default!; // Product | Service
+
+    public Guid? ProductId { get; init; }
+    public Guid? ServiceId { get; init; }
+
+    public string ItemName { get; init; } = default!;
 
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }

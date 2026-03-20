@@ -87,7 +87,9 @@ public sealed class SalesOrder : Entity
             new SalesOrderDetailAddedDomainEvent(
                 Id,
                 d.Id,
+                d.ItemType,
                 d.ProductId,
+                d.ServiceId,
                 d.Quantity,
                 d.UnitPrice,
                 d.DiscountPerc,

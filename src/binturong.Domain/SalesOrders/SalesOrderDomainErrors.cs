@@ -38,7 +38,9 @@ public sealed record SalesOrderConvertedFromQuoteDomainEvent(
 public sealed record SalesOrderDetailAddedDomainEvent(
     Guid SalesOrderId,
     Guid SalesOrderDetailId,
-    Guid ProductId,
+    string ItemType,
+    Guid? ProductId,
+    Guid? ServiceId,
     decimal Quantity,
     decimal UnitPrice,
     decimal DiscountPerc,

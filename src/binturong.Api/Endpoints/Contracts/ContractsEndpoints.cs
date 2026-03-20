@@ -1,5 +1,6 @@
 using Api.Security;
 using Application.Abstractions.Messaging;
+using Application.Common.Selects;
 using Application.Features.Contracts.Attachments.Delete;
 using Application.Features.Contracts.Attachments.Upload;
 using Application.Features.Contracts.ConvertFromQuote;
@@ -7,11 +8,11 @@ using Application.Features.Contracts.Create;
 using Application.Features.Contracts.Delete;
 using Application.Features.Contracts.GetContractById;
 using Application.Features.Contracts.GetContracts;
+using Application.Features.Contracts.GetContractsSelect;
 using Application.Features.Contracts.Milestones.Add;
 using Application.Features.Contracts.Milestones.Remove;
 using Application.Features.Contracts.Milestones.Update;
 using Application.Features.Contracts.Update;
-using Application.ReadModels.CRM;
 using Application.Security.Scopes;
 
 namespace Api.Endpoints.Contracts;
@@ -346,5 +347,23 @@ public sealed class ContractsEndpoints : IEndpoint
                 }
             )
             .RequireScope(SecurityScopes.ContractsAttachmentsDelete);
+
+        group
+            .MapGet(
+                "/select",
+                async (
+                    string? search,
+                    IQueryHandler<GetContractsSelectQuery, IReadOnlyList<SelectOptionDto>> handler,
+                    CancellationToken ct
+                ) =>
+                {
+                    var result = await handler.Handle(new GetContractsSelectQuery(search), ct);
+
+                    return result.IsFailure
+                        ? Results.BadRequest(result.Error)
+                        : Results.Ok(result.Value);
+                }
+            )
+            .RequireScope(SecurityScopes.ContractsRead);
     }
 }

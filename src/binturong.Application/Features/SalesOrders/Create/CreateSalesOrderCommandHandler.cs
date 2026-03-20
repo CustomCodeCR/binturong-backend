@@ -21,23 +21,43 @@ internal sealed class CreateSalesOrderCommandHandler
         if (cmd.Lines is null || cmd.Lines.Count == 0)
             return Result.Failure<Guid>(SalesOrderErrors.DetailsRequired);
 
+        if (string.IsNullOrWhiteSpace(cmd.Currency))
+        {
+            return Result.Failure<Guid>(
+                Error.Validation("SalesOrders.CurrencyRequired", "Currency is required.")
+            );
+        }
+
+        if (cmd.ExchangeRate <= 0)
+        {
+            return Result.Failure<Guid>(
+                Error.Validation("SalesOrders.InvalidExchangeRate", "ExchangeRate must be > 0.")
+            );
+        }
+
         if (!await _db.Clients.AnyAsync(x => x.Id == cmd.ClientId, ct))
+        {
             return Result.Failure<Guid>(
                 Error.NotFound("Clients.NotFound", $"Client '{cmd.ClientId}' not found.")
             );
+        }
 
         if (cmd.BranchId is not null && !await _db.Branches.AnyAsync(x => x.Id == cmd.BranchId, ct))
+        {
             return Result.Failure<Guid>(
                 Error.NotFound("Branches.NotFound", $"Branch '{cmd.BranchId}' not found.")
             );
+        }
 
         if (
             cmd.SellerUserId is not null
             && !await _db.Users.AnyAsync(x => x.Id == cmd.SellerUserId, ct)
         )
+        {
             return Result.Failure<Guid>(
                 Error.NotFound("Users.NotFound", $"User '{cmd.SellerUserId}' not found.")
             );
+        }
 
         var now = DateTime.UtcNow;
 
@@ -57,38 +77,137 @@ internal sealed class CreateSalesOrderCommandHandler
             UpdatedAt = now,
         };
 
-        decimal subtotal = 0m,
-            taxes = 0m,
-            discounts = 0m,
-            total = 0m;
+        decimal subtotal = 0m;
+        decimal taxes = 0m;
+        decimal discounts = 0m;
+        decimal total = 0m;
 
         foreach (var l in cmd.Lines)
         {
-            if (l.ProductId == Guid.Empty)
+            if (string.IsNullOrWhiteSpace(l.ItemType))
+            {
                 return Result.Failure<Guid>(
-                    Error.Validation("SalesOrders.ProductRequired", "ProductId is required.")
+                    Error.Validation("SalesOrders.ItemTypeRequired", "ItemType is required.")
                 );
+            }
+
+            if (l.ItemId == Guid.Empty)
+            {
+                return Result.Failure<Guid>(
+                    Error.Validation("SalesOrders.ItemRequired", "ItemId is required.")
+                );
+            }
 
             if (l.Quantity <= 0)
+            {
                 return Result.Failure<Guid>(
                     Error.Validation("SalesOrders.InvalidQuantity", "Quantity must be > 0.")
                 );
+            }
 
             if (l.UnitPrice <= 0)
+            {
                 return Result.Failure<Guid>(
                     Error.Validation("SalesOrders.InvalidUnitPrice", "UnitPrice must be > 0.")
                 );
+            }
+
+            if (l.DiscountPerc < 0)
+            {
+                return Result.Failure<Guid>(
+                    Error.Validation(
+                        "SalesOrders.InvalidDiscountPerc",
+                        "DiscountPerc must be >= 0."
+                    )
+                );
+            }
+
+            if (l.TaxPerc < 0)
+            {
+                return Result.Failure<Guid>(
+                    Error.Validation("SalesOrders.InvalidTaxPerc", "TaxPerc must be >= 0.")
+                );
+            }
+
+            var itemType = l.ItemType.Trim();
+            Guid? productId = null;
+            Guid? serviceId = null;
+
+            if (itemType.Equals("Product", StringComparison.OrdinalIgnoreCase))
+            {
+                var productExists = await _db.Products.AnyAsync(x => x.Id == l.ItemId, ct);
+                if (!productExists)
+                {
+                    return Result.Failure<Guid>(
+                        Error.NotFound("Products.NotFound", $"Product '{l.ItemId}' not found.")
+                    );
+                }
+
+                productId = l.ItemId;
+                itemType = "Product";
+            }
+            else if (itemType.Equals("Service", StringComparison.OrdinalIgnoreCase))
+            {
+                var service = await _db.Services.FirstOrDefaultAsync(x => x.Id == l.ItemId, ct);
+                if (service is null)
+                {
+                    return Result.Failure<Guid>(
+                        Error.NotFound("Services.NotFound", $"Service '{l.ItemId}' not found.")
+                    );
+                }
+
+                if (!service.IsActive)
+                {
+                    return Result.Failure<Guid>(
+                        Error.Validation(
+                            "SalesOrders.ServiceInactive",
+                            "Service is inactive and cannot be added."
+                        )
+                    );
+                }
+
+                if (
+                    !string.Equals(
+                        service.AvailabilityStatus,
+                        "Active",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    return Result.Failure<Guid>(
+                        Error.Validation(
+                            "SalesOrders.ServiceUnavailable",
+                            "Service is not available and cannot be added."
+                        )
+                    );
+                }
+
+                serviceId = l.ItemId;
+                itemType = "Service";
+            }
+            else
+            {
+                return Result.Failure<Guid>(
+                    Error.Validation(
+                        "SalesOrders.InvalidItemType",
+                        "ItemType must be Product or Service."
+                    )
+                );
+            }
 
             var lineBase = l.Quantity * l.UnitPrice;
             var lineDiscount = lineBase * (l.DiscountPerc / 100m);
-            var lineTax = (lineBase - lineDiscount) * (l.TaxPerc / 100m);
-            var lineTotal = (lineBase - lineDiscount) + lineTax;
+            var taxableBase = lineBase - lineDiscount;
+            var lineTax = taxableBase * (l.TaxPerc / 100m);
+            var lineTotal = taxableBase + lineTax;
 
-            var d = new Domain.SalesOrderDetails.SalesOrderDetail
+            var detail = new Domain.SalesOrderDetails.SalesOrderDetail
             {
                 Id = Guid.NewGuid(),
                 SalesOrderId = so.Id,
-                ProductId = l.ProductId,
+                ItemType = itemType,
+                ProductId = productId,
+                ServiceId = serviceId,
                 Quantity = l.Quantity,
                 UnitPrice = l.UnitPrice,
                 DiscountPerc = l.DiscountPerc,
@@ -96,8 +215,8 @@ internal sealed class CreateSalesOrderCommandHandler
                 LineTotal = lineTotal,
             };
 
-            so.Details.Add(d);
-            so.RaiseDetailAdded(d, now);
+            so.Details.Add(detail);
+            so.RaiseDetailAdded(detail, now);
 
             subtotal += lineBase;
             discounts += lineDiscount;
@@ -115,7 +234,7 @@ internal sealed class CreateSalesOrderCommandHandler
         _db.SalesOrders.Add(so);
         await _db.SaveChangesAsync(ct);
 
-        return so.Id;
+        return Result.Success(so.Id);
     }
 
     private async Task<string> NextCodeAsync(CancellationToken ct)

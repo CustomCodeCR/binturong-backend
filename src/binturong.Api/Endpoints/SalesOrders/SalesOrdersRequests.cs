@@ -1,7 +1,8 @@
 namespace Api.Endpoints.SalesOrders;
 
 public sealed record CreateSalesOrderLineRequest(
-    Guid ProductId,
+    string ItemType, // Product | Service
+    Guid ItemId,
     decimal Quantity,
     decimal UnitPrice,
     decimal DiscountPerc,
