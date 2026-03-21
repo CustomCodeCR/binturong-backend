@@ -13,6 +13,7 @@ using Domain.Contracts;
 using Domain.CostCenters;
 using Domain.CreditNotes;
 using Domain.DebitNotes;
+using Domain.Discounts;
 using Domain.EmployeeHistory;
 using Domain.Employees;
 using Domain.GatewayTransactions;
@@ -116,6 +117,9 @@ public interface IApplicationDbContext
 
     DbSet<SalesOrder> SalesOrders { get; }
     DbSet<SalesOrderDetail> SalesOrderDetails { get; }
+
+    DbSet<DiscountPolicy> DiscountPolicies { get; }
+    DbSet<DiscountApprovalRequest> DiscountApprovalRequests { get; }
 
     // Contracts
     DbSet<Contract> Contracts { get; }

@@ -179,6 +179,11 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Domain.SalesOrderDetails.SalesOrderDetail> SalesOrderDetails =>
         Set<Domain.SalesOrderDetails.SalesOrderDetail>();
 
+    public DbSet<Domain.Discounts.DiscountPolicy> DiscountPolicies =>
+        Set<Domain.Discounts.DiscountPolicy>();
+    public DbSet<Domain.Discounts.DiscountApprovalRequest> DiscountApprovalRequests =>
+        Set<Domain.Discounts.DiscountApprovalRequest>();
+
     public DbSet<Domain.Contracts.Contract> Contracts => Set<Domain.Contracts.Contract>();
     public DbSet<Domain.ContractBillingMilestones.ContractBillingMilestone> ContractBillingMilestones =>
         Set<Domain.ContractBillingMilestones.ContractBillingMilestone>();

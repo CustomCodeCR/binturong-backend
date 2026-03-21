@@ -550,6 +550,52 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        new ScopeDefinition(
+            "discounts.policies.read",
+            "View discount policies",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("discounts.policies.create", "Create discount policies", Roles.Admin),
+        new ScopeDefinition("discounts.policies.update", "Update discount policies", Roles.Admin),
+        new ScopeDefinition(
+            "discounts.approval.read",
+            "View discount approval requests",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "discounts.approval.request",
+            "Request discount approval",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "discounts.approval.approve",
+            "Approve discount requests",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "discounts.approval.reject",
+            "Reject discount requests",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("discounts.apply", "Apply discounts", Roles.Admin, Roles.Manager),
+        new ScopeDefinition("discounts.remove", "Remove discounts", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "discounts.history.read",
+            "View discount history",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "discounts.history.export",
+            "Export discount history",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

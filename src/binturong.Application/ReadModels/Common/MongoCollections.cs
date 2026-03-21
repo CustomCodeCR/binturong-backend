@@ -9,6 +9,9 @@ public static class MongoCollections
     public const string UnitsOfMeasure = "units_of_measure";
     public const string ProductCategories = "product_categories";
     public const string PaymentMethods = "payment_methods";
+    public const string DiscountPolicies = "discounts";
+    public const string DiscountApprovalRequests = "discount_approval_requests";
+    public const string DiscountHistory = "discount_histories";
 
     // ===== SECURITY =====
     public const string Users = "users";

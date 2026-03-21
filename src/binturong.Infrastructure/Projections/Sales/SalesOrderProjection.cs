@@ -6,6 +6,7 @@ using Application.ReadModels.MasterData;
 using Application.ReadModels.Sales;
 using Application.ReadModels.Security;
 using Application.ReadModels.Services;
+using Domain.Discounts;
 using Domain.SalesOrders;
 using MongoDB.Driver;
 
@@ -15,7 +16,11 @@ internal sealed class SalesOrderProjection
     : IProjector<SalesOrderCreatedDomainEvent>,
         IProjector<SalesOrderConvertedFromQuoteDomainEvent>,
         IProjector<SalesOrderDetailAddedDomainEvent>,
-        IProjector<SalesOrderConfirmedDomainEvent>
+        IProjector<SalesOrderConfirmedDomainEvent>,
+        IProjector<SalesOrderLineDiscountAppliedDomainEvent>,
+        IProjector<SalesOrderLineDiscountRemovedDomainEvent>,
+        IProjector<SalesOrderGlobalDiscountAppliedDomainEvent>,
+        IProjector<SalesOrderGlobalDiscountRemovedDomainEvent>
 {
     private readonly IMongoDatabase _db;
 
@@ -32,6 +37,18 @@ internal sealed class SalesOrderProjection
 
     public Task ProjectAsync(SalesOrderDetailAddedDomainEvent e, CancellationToken ct) =>
         AddOrReplaceLineAsync(e, ct);
+
+    public Task ProjectAsync(SalesOrderLineDiscountAppliedDomainEvent e, CancellationToken ct) =>
+        ApplyLineDiscountAsync(e, ct);
+
+    public Task ProjectAsync(SalesOrderLineDiscountRemovedDomainEvent e, CancellationToken ct) =>
+        RemoveLineDiscountAsync(e, ct);
+
+    public Task ProjectAsync(SalesOrderGlobalDiscountAppliedDomainEvent e, CancellationToken ct) =>
+        ApplyGlobalDiscountAsync(e, ct);
+
+    public Task ProjectAsync(SalesOrderGlobalDiscountRemovedDomainEvent e, CancellationToken ct) =>
+        RemoveGlobalDiscountAsync(e, ct);
 
     private async Task UpsertHeaderAsync(SalesOrderCreatedDomainEvent e, CancellationToken ct)
     {
@@ -68,6 +85,9 @@ internal sealed class SalesOrderProjection
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
             .Set(x => x.Total, e.Total)
+            .Set(x => x.GlobalDiscountPerc, 0m)
+            .Set(x => x.GlobalDiscountAmount, 0m)
+            .Set(x => x.GlobalDiscountReason, null)
             .Set(x => x.Notes, e.Notes)
             .Set(x => x.CreatedAt, e.CreatedAtUtc)
             .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
@@ -141,6 +161,8 @@ internal sealed class SalesOrderProjection
             Quantity = e.Quantity,
             UnitPrice = e.UnitPrice,
             DiscountPerc = e.DiscountPerc,
+            DiscountAmount = (e.Quantity * e.UnitPrice) * (e.DiscountPerc / 100m),
+            DiscountReason = null,
             TaxPerc = e.TaxPerc,
             LineTotal = e.LineTotal,
         };
@@ -157,6 +179,195 @@ internal sealed class SalesOrderProjection
             .Set(x => x.UpdatedAt, e.UpdatedAtUtc);
 
         await salesOrders.UpdateOneAsync(filter, push, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    private async Task ApplyLineDiscountAsync(
+        SalesOrderLineDiscountAppliedDomainEvent e,
+        CancellationToken ct
+    )
+    {
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, $"so:{e.SalesOrderId}");
+
+        var so = await salesOrders.Find(filter).FirstOrDefaultAsync(ct);
+        if (so is null)
+            return;
+
+        var updatedLines = so
+            .Lines.Select(l =>
+                l.SalesOrderDetailId == e.SalesOrderDetailId
+                    ? new SalesOrderLineReadModel
+                    {
+                        SalesOrderDetailId = l.SalesOrderDetailId,
+                        ItemType = l.ItemType,
+                        ProductId = l.ProductId,
+                        ServiceId = l.ServiceId,
+                        ItemName = l.ItemName,
+                        Quantity = l.Quantity,
+                        UnitPrice = l.UnitPrice,
+                        DiscountPerc = e.DiscountPerc,
+                        DiscountAmount = e.DiscountAmount,
+                        DiscountReason = e.Reason,
+                        TaxPerc = l.TaxPerc,
+                        LineTotal = l.LineTotal - e.DiscountAmount,
+                    }
+                    : l
+            )
+            .ToList();
+
+        var subtotal = updatedLines.Sum(x => x.Quantity * x.UnitPrice);
+        var lineDiscounts = updatedLines.Sum(x => x.DiscountAmount);
+        var taxes = updatedLines.Sum(x =>
+        {
+            var baseAmount = (x.Quantity * x.UnitPrice) - x.DiscountAmount;
+            return baseAmount * (x.TaxPerc / 100m);
+        });
+
+        var globalDiscountAmount = (subtotal - lineDiscounts) * (so.GlobalDiscountPerc / 100m);
+        var totalDiscounts = lineDiscounts + globalDiscountAmount;
+        var total = (subtotal - totalDiscounts) + taxes;
+
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.Lines, updatedLines)
+            .Set(x => x.Subtotal, subtotal)
+            .Set(x => x.Taxes, taxes)
+            .Set(x => x.Discounts, totalDiscounts)
+            .Set(x => x.Total, total)
+            .Set(x => x.GlobalDiscountAmount, globalDiscountAmount)
+            .Set(x => x.UpdatedAt, e.AppliedAtUtc);
+
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    private async Task RemoveLineDiscountAsync(
+        SalesOrderLineDiscountRemovedDomainEvent e,
+        CancellationToken ct
+    )
+    {
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, $"so:{e.SalesOrderId}");
+
+        var so = await salesOrders.Find(filter).FirstOrDefaultAsync(ct);
+        if (so is null)
+            return;
+
+        var updatedLines = so
+            .Lines.Select(l =>
+                l.SalesOrderDetailId == e.SalesOrderDetailId
+                    ? new SalesOrderLineReadModel
+                    {
+                        SalesOrderDetailId = l.SalesOrderDetailId,
+                        ItemType = l.ItemType,
+                        ProductId = l.ProductId,
+                        ServiceId = l.ServiceId,
+                        ItemName = l.ItemName,
+                        Quantity = l.Quantity,
+                        UnitPrice = l.UnitPrice,
+                        DiscountPerc = 0m,
+                        DiscountAmount = 0m,
+                        DiscountReason = null,
+                        TaxPerc = l.TaxPerc,
+                        LineTotal =
+                            (l.Quantity * l.UnitPrice)
+                            + ((l.Quantity * l.UnitPrice) * (l.TaxPerc / 100m)),
+                    }
+                    : l
+            )
+            .ToList();
+
+        var subtotal = updatedLines.Sum(x => x.Quantity * x.UnitPrice);
+        var lineDiscounts = updatedLines.Sum(x => x.DiscountAmount);
+        var taxes = updatedLines.Sum(x =>
+        {
+            var baseAmount = (x.Quantity * x.UnitPrice) - x.DiscountAmount;
+            return baseAmount * (x.TaxPerc / 100m);
+        });
+
+        var globalDiscountAmount = (subtotal - lineDiscounts) * (so.GlobalDiscountPerc / 100m);
+        var totalDiscounts = lineDiscounts + globalDiscountAmount;
+        var total = (subtotal - totalDiscounts) + taxes;
+
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.Lines, updatedLines)
+            .Set(x => x.Subtotal, subtotal)
+            .Set(x => x.Taxes, taxes)
+            .Set(x => x.Discounts, totalDiscounts)
+            .Set(x => x.Total, total)
+            .Set(x => x.GlobalDiscountAmount, globalDiscountAmount)
+            .Set(x => x.UpdatedAt, e.RemovedAtUtc);
+
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    private async Task ApplyGlobalDiscountAsync(
+        SalesOrderGlobalDiscountAppliedDomainEvent e,
+        CancellationToken ct
+    )
+    {
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, $"so:{e.SalesOrderId}");
+
+        var so = await salesOrders.Find(filter).FirstOrDefaultAsync(ct);
+        if (so is null)
+            return;
+
+        var subtotal = so.Lines.Sum(x => x.Quantity * x.UnitPrice);
+        var lineDiscounts = so.Lines.Sum(x => x.DiscountAmount);
+        var taxes = so.Lines.Sum(x =>
+        {
+            var baseAmount = (x.Quantity * x.UnitPrice) - x.DiscountAmount;
+            return baseAmount * (x.TaxPerc / 100m);
+        });
+
+        var totalDiscounts = lineDiscounts + e.DiscountAmount;
+        var total = (subtotal - totalDiscounts) + taxes;
+
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.GlobalDiscountPerc, e.DiscountPerc)
+            .Set(x => x.GlobalDiscountAmount, e.DiscountAmount)
+            .Set(x => x.GlobalDiscountReason, e.Reason)
+            .Set(x => x.Subtotal, subtotal)
+            .Set(x => x.Taxes, taxes)
+            .Set(x => x.Discounts, totalDiscounts)
+            .Set(x => x.Total, total)
+            .Set(x => x.UpdatedAt, e.AppliedAtUtc);
+
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
+    }
+
+    private async Task RemoveGlobalDiscountAsync(
+        SalesOrderGlobalDiscountRemovedDomainEvent e,
+        CancellationToken ct
+    )
+    {
+        var salesOrders = _db.GetCollection<SalesOrderReadModel>(MongoCollections.SalesOrders);
+        var filter = Builders<SalesOrderReadModel>.Filter.Eq(x => x.Id, $"so:{e.SalesOrderId}");
+
+        var so = await salesOrders.Find(filter).FirstOrDefaultAsync(ct);
+        if (so is null)
+            return;
+
+        var subtotal = so.Lines.Sum(x => x.Quantity * x.UnitPrice);
+        var lineDiscounts = so.Lines.Sum(x => x.DiscountAmount);
+        var taxes = so.Lines.Sum(x =>
+        {
+            var baseAmount = (x.Quantity * x.UnitPrice) - x.DiscountAmount;
+            return baseAmount * (x.TaxPerc / 100m);
+        });
+
+        var total = (subtotal - lineDiscounts) + taxes;
+
+        var update = Builders<SalesOrderReadModel>
+            .Update.Set(x => x.GlobalDiscountPerc, 0m)
+            .Set(x => x.GlobalDiscountAmount, 0m)
+            .Set(x => x.GlobalDiscountReason, null)
+            .Set(x => x.Subtotal, subtotal)
+            .Set(x => x.Taxes, taxes)
+            .Set(x => x.Discounts, lineDiscounts)
+            .Set(x => x.Total, total)
+            .Set(x => x.UpdatedAt, e.RemovedAtUtc);
+
+        await salesOrders.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
 
     private static string NormalizeItemType(string itemType)
@@ -191,7 +402,6 @@ internal sealed class SalesOrderProjection
     private async Task<string> ResolveClientNameAsync(Guid clientId, CancellationToken ct)
     {
         var clients = _db.GetCollection<ClientReadModel>(MongoCollections.Clients);
-
         var client = await clients.Find(x => x.ClientId == clientId).FirstOrDefaultAsync(ct);
 
         if (client is null)
@@ -209,7 +419,6 @@ internal sealed class SalesOrderProjection
     private async Task<string?> ResolveBranchNameAsync(Guid branchId, CancellationToken ct)
     {
         var branches = _db.GetCollection<BranchReadModel>(MongoCollections.Branches);
-
         var branch = await branches.Find(x => x.BranchId == branchId).FirstOrDefaultAsync(ct);
 
         if (branch is null)
@@ -224,7 +433,6 @@ internal sealed class SalesOrderProjection
     private async Task<string?> ResolveUserNameAsync(Guid userId, CancellationToken ct)
     {
         var users = _db.GetCollection<UserReadModel>(MongoCollections.Users);
-
         var user = await users.Find(x => x.UserId == userId).FirstOrDefaultAsync(ct);
 
         if (user is null)
@@ -239,7 +447,6 @@ internal sealed class SalesOrderProjection
     private async Task<string> ResolveProductNameAsync(Guid productId, CancellationToken ct)
     {
         var products = _db.GetCollection<ProductReadModel>(MongoCollections.Products);
-
         var product = await products.Find(x => x.ProductId == productId).FirstOrDefaultAsync(ct);
 
         if (product is null)
@@ -254,7 +461,6 @@ internal sealed class SalesOrderProjection
     private async Task<string> ResolveServiceNameAsync(Guid serviceId, CancellationToken ct)
     {
         var services = _db.GetCollection<ServiceReadModel>(MongoCollections.Services);
-
         var service = await services.Find(x => x.ServiceId == serviceId).FirstOrDefaultAsync(ct);
 
         if (service is null)

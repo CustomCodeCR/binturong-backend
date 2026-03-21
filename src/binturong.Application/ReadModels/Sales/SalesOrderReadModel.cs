@@ -30,6 +30,10 @@ public sealed class SalesOrderReadModel
     public decimal Discounts { get; init; }
     public decimal Total { get; init; }
 
+    public decimal GlobalDiscountPerc { get; init; }
+    public decimal GlobalDiscountAmount { get; init; }
+    public string? GlobalDiscountReason { get; init; }
+
     public string? Notes { get; init; }
 
     public DateTime CreatedAt { get; init; }
@@ -43,7 +47,7 @@ public sealed class SalesOrderLineReadModel
 {
     public Guid SalesOrderDetailId { get; init; }
 
-    public string ItemType { get; init; } = default!; // Product | Service
+    public string ItemType { get; init; } = default!;
 
     public Guid? ProductId { get; init; }
     public Guid? ServiceId { get; init; }
@@ -52,7 +56,11 @@ public sealed class SalesOrderLineReadModel
 
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
+
     public decimal DiscountPerc { get; init; }
+    public decimal DiscountAmount { get; init; }
+    public string? DiscountReason { get; init; }
+
     public decimal TaxPerc { get; init; }
     public decimal LineTotal { get; init; }
 }
