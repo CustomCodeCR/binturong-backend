@@ -596,6 +596,7 @@ public static class ScopeRegistry
             Roles.Admin,
             Roles.Manager
         ),
+        new ScopeDefinition("dashboard.read", "View dashboard", Roles.Admin, Roles.Manager),
     };
 
     public static class Roles
