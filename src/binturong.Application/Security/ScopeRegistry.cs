@@ -597,6 +597,62 @@ public static class ScopeRegistry
             Roles.Manager
         ),
         new ScopeDefinition("dashboard.read", "View dashboard", Roles.Admin, Roles.Manager),
+        new ScopeDefinition(
+            "reports.financial.read",
+            "View financial reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.financial.export_pdf",
+            "Export financial reports to PDF",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.inventory.read",
+            "View inventory reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.inventory.export_excel",
+            "Export inventory reports to Excel",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.clients.read",
+            "View client reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.clients.export",
+            "Export client reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.service_orders.read",
+            "View service order reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.service_orders.export",
+            "Export service order reports",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "reports.schedules.read",
+            "View report schedules",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition("reports.schedules.create", "Create report schedules", Roles.Admin),
+        new ScopeDefinition("reports.schedules.update", "Update report schedules", Roles.Admin),
     };
 
     public static class Roles

@@ -40,6 +40,7 @@ using Domain.PurchaseReceipts;
 using Domain.PurchaseRequests;
 using Domain.QuoteDetails;
 using Domain.Quotes;
+using Domain.Reports;
 using Domain.Roles;
 using Domain.RoleScopes;
 using Domain.SalesOrderDetails;
@@ -86,6 +87,7 @@ public interface IApplicationDbContext
     DbSet<Tax> Taxes { get; }
     DbSet<UnitOfMeasure> UnitsOfMeasure { get; }
     DbSet<ProductCategory> ProductCategories { get; }
+    DbSet<ReportSchedule> ReportSchedules { get; }
 
     // Clients
     DbSet<Client> Clients { get; }

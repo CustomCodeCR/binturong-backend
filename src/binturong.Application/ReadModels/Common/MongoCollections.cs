@@ -12,6 +12,7 @@ public static class MongoCollections
     public const string DiscountPolicies = "discounts";
     public const string DiscountApprovalRequests = "discount_approval_requests";
     public const string DiscountHistory = "discount_histories";
+    public const string ReportSchedules = "report_schedules";
 
     // ===== SECURITY =====
     public const string Users = "users";

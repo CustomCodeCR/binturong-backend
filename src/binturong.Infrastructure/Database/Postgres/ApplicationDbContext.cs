@@ -138,6 +138,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         Set<Domain.UnitsOfMeasure.UnitOfMeasure>();
     public DbSet<Domain.ProductCategories.ProductCategory> ProductCategories =>
         Set<Domain.ProductCategories.ProductCategory>();
+    public DbSet<Domain.Reports.ReportSchedule> ReportSchedules =>
+        Set<Domain.Reports.ReportSchedule>();
 
     public DbSet<Domain.Clients.Client> Clients => Set<Domain.Clients.Client>();
     public DbSet<Domain.ClientAddresses.ClientAddress> ClientAddresses =>
