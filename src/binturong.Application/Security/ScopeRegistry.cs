@@ -653,6 +653,54 @@ public static class ScopeRegistry
         ),
         new ScopeDefinition("reports.schedules.create", "Create report schedules", Roles.Admin),
         new ScopeDefinition("reports.schedules.update", "Update report schedules", Roles.Admin),
+        new ScopeDefinition(
+            "accounting.read",
+            "View accounting entries",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.create_income",
+            "Create income entries",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.create_expense",
+            "Create expense entries",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.reconcile",
+            "Reconcile accounting entries",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.income_statement.read",
+            "View income statement",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.income_statement.export",
+            "Export income statement",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.cash_flow.read",
+            "View cash flow",
+            Roles.Admin,
+            Roles.Manager
+        ),
+        new ScopeDefinition(
+            "accounting.cash_flow.export",
+            "Export cash flow",
+            Roles.Admin,
+            Roles.Manager
+        ),
     };
 
     public static class Roles

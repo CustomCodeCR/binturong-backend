@@ -1,3 +1,4 @@
+using Domain.Accounting;
 using Domain.AccountingPeriods;
 using Domain.AccountsChart;
 using Domain.AccountsPayable;
@@ -177,6 +178,8 @@ public interface IApplicationDbContext
     DbSet<AccountingPeriod> AccountingPeriods { get; }
     DbSet<JournalEntry> JournalEntries { get; }
     DbSet<JournalEntryDetail> JournalEntryDetails { get; }
+    DbSet<AccountingEntry> AccountingEntries { get; }
+    DbSet<AccountingReconciliation> AccountingReconciliations { get; }
 
     // Audit + Outbox
     DbSet<AuditLog> AuditLogs { get; }

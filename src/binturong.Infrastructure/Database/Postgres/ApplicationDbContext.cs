@@ -257,6 +257,10 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
         Set<Domain.JournalEntries.JournalEntry>();
     public DbSet<Domain.JournalEntryDetails.JournalEntryDetail> JournalEntryDetails =>
         Set<Domain.JournalEntryDetails.JournalEntryDetail>();
+    public DbSet<Domain.Accounting.AccountingEntry> AccountingEntries =>
+        Set<Domain.Accounting.AccountingEntry>();
+    public DbSet<Domain.Accounting.AccountingReconciliation> AccountingReconciliations =>
+        Set<Domain.Accounting.AccountingReconciliation>();
 
     public DbSet<Domain.AuditLogs.AuditLog> AuditLogs => Set<Domain.AuditLogs.AuditLog>();
     public DbSet<Domain.OutboxMessages.OutboxMessage> OutboxMessages =>

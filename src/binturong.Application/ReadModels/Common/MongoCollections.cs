@@ -72,6 +72,8 @@ public static class MongoCollections
     public const string Accounts = "accounts";
     public const string AccountingPeriods = "accounting_periods";
     public const string JournalEntries = "journal_entries";
+    public const string AccountingEntries = "accounting_entries";
+    public const string AccountingReconciliations = "accounting_reconciliations";
 
     // ===== AUDIT =====
     public const string AuditLogs = "audit_logs";
