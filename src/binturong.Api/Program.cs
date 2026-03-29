@@ -6,7 +6,25 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "FrontendCors",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:5173",
+                    "https://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "https://127.0.0.1:5173"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    );
+});
 
 builder.Services.AddSwaggerWithJwt();
 builder.Services.AddEndpoints(typeof(Program).Assembly);
@@ -37,11 +55,9 @@ using (var scope = app.Services.CreateScope())
         .SeedAsync();
 }
 
-app.UseCors(policy =>
-    policy.AllowAnyHeader().AllowAnyMethod().SetIsOriginAllowed(_ => true).AllowCredentials()
-);
-
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendCors");
 
 var localRootPath = builder.Configuration["Storage:Local:RootPath"];
 
@@ -68,4 +84,3 @@ app.MapGet("/health", () => Results.Ok("OK")).WithTags("Health");
 app.MapHub<NotificationsHub>("/hubs/notifications");
 
 app.Run();
-
