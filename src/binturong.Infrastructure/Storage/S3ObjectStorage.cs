@@ -28,7 +28,7 @@ public sealed class S3ObjectStorage : IObjectStorage
             InputStream = content,
             ContentType = string.IsNullOrWhiteSpace(contentType)
                 ? "application/octet-stream"
-                : contentType,
+                : contentType.Trim(),
         };
 
         await _s3.PutObjectAsync(req, ct);
@@ -70,8 +70,32 @@ public sealed class S3ObjectStorage : IObjectStorage
 
     public string GetPublicUrl(string key)
     {
-        return $"https://{_opt.S3.Bucket}.s3.amazonaws.com/{NormalizeKey(key)}";
+        var normalizedKey = NormalizeKey(key);
+
+        if (!string.IsNullOrWhiteSpace(_opt.S3.ServiceUrl))
+        {
+            var baseUrl = _opt.S3.ServiceUrl.Trim().TrimEnd('/');
+
+            if (_opt.S3.ForcePathStyle)
+                return $"{baseUrl}/{_opt.S3.Bucket}/{normalizedKey}";
+
+            var uri = new Uri(baseUrl);
+            var hostWithBucket = $"{_opt.S3.Bucket}.{uri.Host}";
+            var portPart = uri.IsDefaultPort ? string.Empty : $":{uri.Port}";
+            return $"{uri.Scheme}://{hostWithBucket}{portPart}/{normalizedKey}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(_opt.S3.Region))
+            return $"https://{_opt.S3.Bucket}.s3.{_opt.S3.Region}.amazonaws.com/{normalizedKey}";
+
+        return $"https://{_opt.S3.Bucket}.s3.amazonaws.com/{normalizedKey}";
     }
 
-    private static string NormalizeKey(string key) => key.TrimStart('/');
+    private static string NormalizeKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Storage key cannot be null or empty.", nameof(key));
+
+        return key.Trim().TrimStart('/');
+    }
 }

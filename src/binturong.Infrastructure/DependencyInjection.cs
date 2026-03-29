@@ -1,5 +1,6 @@
 using System.Text;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using Application.Abstractions.Authentication;
 using Application.Abstractions.Background;
@@ -37,6 +38,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
@@ -57,11 +59,8 @@ namespace Infrastructure
             services.AddMongo(configuration);
             services.AddOutboxAndProjections(configuration);
             services.AddHealthChecks(configuration);
-
             services.AddPlatformServices(configuration);
-
             services.AddEInvoicing(configuration);
-
             services.AddAuthenticationInternal(configuration);
             services.AddAuthorizationInternal();
 
@@ -87,9 +86,7 @@ namespace Infrastructure
             services.AddScoped<ICommandBus, CommandBus>();
 
             services.Configure<PayrollOptions>(configuration.GetSection("Payroll"));
-            services.AddSingleton(sp =>
-                sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayrollOptions>>().Value
-            );
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<PayrollOptions>>().Value);
 
             return services;
         }
@@ -205,20 +202,52 @@ namespace Infrastructure
             IConfiguration config
         )
         {
-            var storageOpt =
-                config.GetSection("Storage").Get<StorageOptions>() ?? new StorageOptions();
-            var emailOpt = config.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
+            services.Configure<StorageOptions>(config.GetSection("Storage"));
+            services.Configure<EmailOptions>(config.GetSection("Email"));
 
-            services.AddSingleton(storageOpt);
-            services.AddSingleton(emailOpt);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<StorageOptions>>().Value);
+
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<EmailOptions>>().Value);
 
             services.AddSingleton<LocalObjectStorage>();
 
-            services.AddSingleton<IAmazonS3>(_ =>
+            services.AddSingleton<IAmazonS3>(sp =>
             {
-                var regionName = config["AWS:Region"] ?? config["AWS_REGION"] ?? "us-east-1";
-                var region = RegionEndpoint.GetBySystemName(regionName);
-                var s3Config = new AmazonS3Config { RegionEndpoint = region };
+                var storageOptions = sp.GetRequiredService<StorageOptions>();
+                var s3 = storageOptions.S3;
+
+                var regionName = !string.IsNullOrWhiteSpace(s3.Region)
+                    ? s3.Region
+                    : config["AWS:Region"] ?? config["AWS_REGION"] ?? "us-east-1";
+
+                var s3Config = new AmazonS3Config
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(regionName),
+                };
+
+                if (!string.IsNullOrWhiteSpace(s3.ServiceUrl))
+                {
+                    s3Config.ServiceURL = s3.ServiceUrl;
+                    s3Config.ForcePathStyle = s3.ForcePathStyle;
+                    s3Config.UseHttp = s3.ServiceUrl.StartsWith(
+                        "http://",
+                        StringComparison.OrdinalIgnoreCase
+                    );
+
+                    if (!string.IsNullOrWhiteSpace(s3.Region))
+                        s3Config.AuthenticationRegion = s3.Region;
+                }
+
+                if (!string.IsNullOrWhiteSpace(s3.AccessKey))
+                {
+                    var credentials = new BasicAWSCredentials(
+                        s3.AccessKey,
+                        s3.SecretKey ?? string.Empty
+                    );
+
+                    return new AmazonS3Client(credentials, s3Config);
+                }
+
                 return new AmazonS3Client(s3Config);
             });
 
@@ -247,6 +276,7 @@ namespace Infrastructure
         )
         {
             var postgresConn = configuration.GetConnectionString("Database");
+
             if (!string.IsNullOrWhiteSpace(postgresConn))
                 services.AddHealthChecks().AddNpgSql(postgresConn);
             else
