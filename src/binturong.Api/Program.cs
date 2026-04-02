@@ -12,13 +12,7 @@ builder.Services.AddCors(options =>
         "FrontendCors",
         policy =>
         {
-            policy
-                .WithOrigins(
-                    "*",
-                )
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
+            policy.WithOrigins("*").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
         }
     );
 });
@@ -31,7 +25,11 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (
+    app.Environment.IsDevelopment()
+    || app.Environment.IsProduction()
+    || app.Environment.IsStaging()
+)
 {
     app.UseSwaggerWithJwt();
     await app.ApplyDevMigrationsAndMongoAsync();
