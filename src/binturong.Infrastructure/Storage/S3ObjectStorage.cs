@@ -70,25 +70,7 @@ public sealed class S3ObjectStorage : IObjectStorage
 
     public string GetPublicUrl(string key)
     {
-        var normalizedKey = NormalizeKey(key);
-
-        if (!string.IsNullOrWhiteSpace(_opt.S3.ServiceUrl))
-        {
-            var baseUrl = _opt.S3.ServiceUrl.Trim().TrimEnd('/');
-
-            if (_opt.S3.ForcePathStyle)
-                return $"{baseUrl}/{_opt.S3.Bucket}/{normalizedKey}";
-
-            var uri = new Uri(baseUrl);
-            var hostWithBucket = $"{_opt.S3.Bucket}.{uri.Host}";
-            var portPart = uri.IsDefaultPort ? string.Empty : $":{uri.Port}";
-            return $"{uri.Scheme}://{hostWithBucket}{portPart}/{normalizedKey}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(_opt.S3.Region))
-            return $"https://{_opt.S3.Bucket}.s3.{_opt.S3.Region}.amazonaws.com/{normalizedKey}";
-
-        return $"https://{_opt.S3.Bucket}.s3.amazonaws.com/{normalizedKey}";
+        return S3UrlResolver.BuildPublicUrl(_opt, key);
     }
 
     private static string NormalizeKey(string key)

@@ -21,4 +21,5 @@ public sealed class S3StorageOptions
     public string AccessKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
     public bool ForcePathStyle { get; set; } = true;
+    public bool PublicBucket { get; set; }
 }
