@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
         "FrontendCors",
         policy =>
         {
-            policy.WithOrigins("*").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
         }
     );
 });
