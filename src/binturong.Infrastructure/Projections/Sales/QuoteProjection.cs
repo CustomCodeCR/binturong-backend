@@ -49,6 +49,8 @@ internal sealed class QuoteProjection
 
             IssueDate = e.IssueDate,
             ValidUntil = e.ValidUntil,
+            UpdatedAt = null,
+
             Status = e.Status,
 
             Currency = e.Currency,
@@ -77,18 +79,6 @@ internal sealed class QuoteProjection
 
         var productName = await ResolveProductNameAsync(e.ProductId, ct);
 
-        var line = new QuoteLineReadModel
-        {
-            QuoteDetailId = e.QuoteDetailId,
-            ProductId = e.ProductId,
-            ProductName = productName,
-            Quantity = ToDecimal(e.Quantity),
-            UnitPrice = ToDecimal(e.UnitPrice),
-            DiscountPerc = ToDecimal(e.DiscountPerc),
-            TaxPerc = ToDecimal(e.TaxPerc),
-            LineTotal = ToDecimal(e.LineTotal),
-        };
-
         var quantity = ToDecimal(e.Quantity);
         var unitPrice = ToDecimal(e.UnitPrice);
         var discountPerc = ToDecimal(e.DiscountPerc);
@@ -100,8 +90,30 @@ internal sealed class QuoteProjection
         var taxableAmount = lineSubtotal - discountAmount;
         var taxAmount = taxableAmount * (taxPerc / 100m);
 
+        var line = new QuoteLineReadModel
+        {
+            QuoteDetailId = e.QuoteDetailId,
+
+            ItemType = "Product",
+            ProductId = e.ProductId,
+            ServiceId = null,
+
+            ItemName = productName,
+
+            Quantity = quantity,
+            UnitPrice = unitPrice,
+
+            DiscountPerc = discountPerc,
+            DiscountAmount = discountAmount,
+            DiscountReason = null,
+
+            TaxPerc = taxPerc,
+            LineTotal = lineTotal,
+        };
+
         var update = Builders<QuoteReadModel>
             .Update.Push(x => x.Lines, line)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Inc(x => x.Subtotal, lineSubtotal)
             .Inc(x => x.Discounts, discountAmount)
             .Inc(x => x.Taxes, taxAmount)
@@ -129,6 +141,7 @@ internal sealed class QuoteProjection
             .Update.Set(x => x.Status, "Accepted")
             .Set(x => x.AcceptedByClient, true)
             .Set(x => x.AcceptanceDate, e.AcceptedAt)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Inc(x => x.Version, 1);
 
         await quotes.UpdateOneAsync(
@@ -147,6 +160,7 @@ internal sealed class QuoteProjection
             .Update.Set(x => x.Status, "Rejected")
             .Set(x => x.AcceptedByClient, false)
             .Set(x => x.AcceptanceDate, null)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Inc(x => x.Version, 1);
 
         await quotes.UpdateOneAsync(
@@ -163,6 +177,7 @@ internal sealed class QuoteProjection
 
         var update = Builders<QuoteReadModel>
             .Update.Set(x => x.Status, "Expired")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Inc(x => x.Version, 1);
 
         await quotes.UpdateOneAsync(
@@ -179,6 +194,7 @@ internal sealed class QuoteProjection
 
         var update = Builders<QuoteReadModel>
             .Update.Set(x => x.Status, status)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow)
             .Inc(x => x.Version, 1);
 
         await quotes.UpdateOneAsync(
@@ -212,9 +228,12 @@ internal sealed class QuoteProjection
 
     private async Task<string> ResolveBranchNameAsync(Guid? branchId, CancellationToken ct)
     {
+        if (branchId is null)
+            return string.Empty;
+
         var branches = _db.GetCollection<BranchReadModel>(BranchesCollection);
 
-        var branch = await branches.Find(x => x.BranchId == branchId).FirstOrDefaultAsync(ct);
+        var branch = await branches.Find(x => x.BranchId == branchId.Value).FirstOrDefaultAsync(ct);
 
         if (branch is null)
             return string.Empty;

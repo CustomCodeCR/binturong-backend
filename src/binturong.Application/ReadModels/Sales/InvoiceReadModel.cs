@@ -1,8 +1,11 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace Application.ReadModels.Sales;
 
+[BsonIgnoreExtraElements]
 public sealed class InvoiceReadModel
 {
-    public string Id { get; init; } = default!; // "invoice:{InvoiceId}"
+    public string Id { get; init; } = default!;
     public Guid InvoiceId { get; init; }
 
     public string? TaxKey { get; init; }
@@ -18,6 +21,9 @@ public sealed class InvoiceReadModel
     public Guid? ContractId { get; init; }
 
     public DateTime IssueDate { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
+
     public string DocumentType { get; init; } = default!;
 
     public string Currency { get; init; } = default!;
@@ -43,17 +49,28 @@ public sealed class InvoiceReadModel
     public decimal PendingAmount { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 public sealed class InvoiceLineReadModel
 {
     public Guid InvoiceDetailId { get; init; }
 
-    public Guid ProductId { get; init; }
+    public string ItemType { get; init; } = "Product";
+
+    public Guid? ProductId { get; init; }
+    public Guid? ServiceId { get; init; }
+
+    public string ItemName { get; init; } = default!;
+
     public string ProductName { get; init; } = default!;
     public string Description { get; init; } = default!;
 
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
+
     public decimal DiscountPerc { get; init; }
+    public decimal DiscountAmount { get; init; }
+    public string? DiscountReason { get; init; }
+
     public decimal TaxPerc { get; init; }
     public decimal LineTotal { get; init; }
 }

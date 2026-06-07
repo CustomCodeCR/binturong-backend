@@ -55,7 +55,8 @@ internal sealed class InvoiceProjection
 
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.TaxStatus, "Processing")
-            .Set(x => x.InternalStatus, "Pending");
+            .Set(x => x.InternalStatus, "Pending")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -66,7 +67,9 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<InvoiceReadModel>.Update.Set(x => x.XmlS3Key, e.XmlS3Key);
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.XmlS3Key, e.XmlS3Key)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -77,7 +80,9 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<InvoiceReadModel>.Update.Set(x => x.PdfS3Key, e.PdfS3Key);
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.PdfS3Key, e.PdfS3Key)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -100,7 +105,8 @@ internal sealed class InvoiceProjection
             .Update.Set(x => x.TaxKey, e.TaxKey)
             .Set(x => x.Consecutive, e.Consecutive)
             .Set(x => x.TaxStatus, e.TaxStatus)
-            .Set(x => x.InternalStatus, normalizedInternalStatus);
+            .Set(x => x.InternalStatus, normalizedInternalStatus)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -113,7 +119,8 @@ internal sealed class InvoiceProjection
 
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.TaxStatus, "Rejected")
-            .Set(x => x.InternalStatus, "Error");
+            .Set(x => x.InternalStatus, "Error")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -130,7 +137,8 @@ internal sealed class InvoiceProjection
             .Set(x => x.PdfS3Key, e.PdfS3Key)
             .Set(x => x.XmlS3Key, e.XmlS3Key)
             .Set(x => x.TaxStatus, "Emitted")
-            .Set(x => x.InternalStatus, "Ok");
+            .Set(x => x.InternalStatus, "Ok")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -143,7 +151,8 @@ internal sealed class InvoiceProjection
 
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.TaxStatus, "Rejected")
-            .Set(x => x.InternalStatus, "Error");
+            .Set(x => x.InternalStatus, "Error")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -156,7 +165,8 @@ internal sealed class InvoiceProjection
 
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.TaxStatus, "Contingency")
-            .Set(x => x.InternalStatus, "PendingResend");
+            .Set(x => x.InternalStatus, "PendingResend")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -172,7 +182,8 @@ internal sealed class InvoiceProjection
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.PaidAmount, e.PaidAmount)
             .Set(x => x.PendingAmount, e.PendingAmount)
-            .Set(x => x.InternalStatus, internalStatus);
+            .Set(x => x.InternalStatus, internalStatus)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -185,7 +196,8 @@ internal sealed class InvoiceProjection
 
         var update = Builders<InvoiceReadModel>
             .Update.Set(x => x.InternalStatus, "Paid")
-            .Set(x => x.PendingAmount, 0m);
+            .Set(x => x.PendingAmount, 0m)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -199,10 +211,9 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<InvoiceReadModel>.Update.Set(
-            x => x.InternalStatus,
-            "PaymentVerification"
-        );
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.InternalStatus, "PaymentVerification")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -216,7 +227,9 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<InvoiceReadModel>.Update.Set(x => x.InternalStatus, "Pending");
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.InternalStatus, "Pending")
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -227,7 +240,9 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
-        var update = Builders<InvoiceReadModel>.Update.Set(x => x.EmailSent, true);
+        var update = Builders<InvoiceReadModel>
+            .Update.Set(x => x.EmailSent, true)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }
@@ -248,18 +263,30 @@ internal sealed class InvoiceProjection
             var productName = await ResolveProductNameAsync(line.ProductId, ct);
             var resolvedDescription = await ResolveProductDescriptionAsync(line.ProductId, ct);
 
+            var description = !string.IsNullOrWhiteSpace(line.Description)
+                ? line.Description.Trim()
+                : resolvedDescription;
+
             lines.Add(
                 new InvoiceLineReadModel
                 {
                     InvoiceDetailId = line.InvoiceDetailId,
+
+                    ItemType = "Product",
                     ProductId = line.ProductId,
+                    ServiceId = null,
+
+                    ItemName = productName,
                     ProductName = productName,
-                    Description = !string.IsNullOrWhiteSpace(line.Description)
-                        ? line.Description.Trim()
-                        : resolvedDescription,
+                    Description = description,
+
                     Quantity = line.Quantity,
                     UnitPrice = line.UnitPrice,
+
                     DiscountPerc = line.DiscountPerc,
+                    DiscountAmount = 0m,
+                    DiscountReason = null,
+
                     TaxPerc = line.TaxPerc,
                     LineTotal = line.LineTotal,
                 }
@@ -269,8 +296,12 @@ internal sealed class InvoiceProjection
         var id = $"invoice:{e.InvoiceId}";
         var filter = Builders<InvoiceReadModel>.Filter.Eq(x => x.Id, id);
 
+        var now = DateTime.UtcNow;
+
         var update = Builders<InvoiceReadModel>
             .Update.SetOnInsert(x => x.Id, id)
+            .SetOnInsert(x => x.CreatedAt, now)
+            .Set(x => x.UpdatedAt, now)
             .Set(x => x.InvoiceId, e.InvoiceId)
             .Set(x => x.ClientId, e.ClientId)
             .Set(x => x.ClientName, clientName)
@@ -324,7 +355,8 @@ internal sealed class InvoiceProjection
             .Set(x => x.Taxes, e.Taxes)
             .Set(x => x.Discounts, e.Discounts)
             .Set(x => x.Total, e.Total)
-            .Set(x => x.Notes, e.Notes);
+            .Set(x => x.Notes, e.Notes)
+            .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
         await col.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true }, ct);
     }

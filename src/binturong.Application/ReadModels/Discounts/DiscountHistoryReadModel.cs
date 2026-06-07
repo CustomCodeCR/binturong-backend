@@ -6,7 +6,9 @@ public sealed class DiscountHistoryReadModel
     public Guid HistoryId { get; init; }
 
     public Guid SalesOrderId { get; init; }
+    public Guid? QuoteId { get; init; }
     public string? SalesOrderCode { get; init; }
+    public string? QuoteCode { get; set; }
 
     public Guid? SalesOrderDetailId { get; init; }
 
